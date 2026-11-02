@@ -1,5 +1,4 @@
 import { Router, Response } from 'express';
-import { v4 as uuidv4 } from 'uuid';
 import NotificationModel from '../models/Notification';
 import Requirement from '../models/Requirement';
 import Match from '../models/Match';
@@ -7,13 +6,9 @@ import Patient from '../models/Patient';
 import Claim from '../models/Claim';
 import QueryModel from '../models/Query';
 import { requireAuth, requireStaff, AuthRequest } from '../middleware/authMiddleware';
-import { writeAudit } from '../lib/audit';
 import { generateNotification } from '../services/notificationGenerator';
 import { getConfig } from '../lib/env';
-import { MetaWhatsAppAdapter } from '../adapters/whatsapp/MetaWhatsAppAdapter';
-import { MockWhatsAppAdapter } from '../adapters/whatsapp/MockWhatsAppAdapter';
-import { SmtpEmailAdapter } from '../adapters/email/SmtpEmailAdapter';
-import { MockEmailAdapter } from '../adapters/email/MockEmailAdapter';
+import { deliverNotificationChannel } from '../services/notificationDelivery';
 
 const router = Router();
 
@@ -96,88 +91,27 @@ router.post('/send', requireStaff, async (req: AuthRequest, res: Response) => {
     const patient = await Patient.findOne({ patientId: query.patientId });
     if (!patient) { res.status(404).json({ error: 'Patient not found' }); return; }
 
-    const cfg = getConfig();
-
-    // Idempotency key: prevents duplicate sends
-    const idempotencyKey = `${queryId}-${channel}-${uuidv4().slice(0, 8)}`;
-
-    // Check for duplicate (same queryId + channel with non-failed status)
-    const existing = await NotificationModel.findOne({
+    const delivery = await deliverNotificationChannel({
       queryId,
-      channel,
-      submissionStatus: { $in: ['SUBMITTED', 'SIMULATED', 'QUEUED'] },
+      claimId: query.claimId,
+      patient,
+      actor: req.user!.userId,
+      channel: channel as 'WHATSAPP' | 'EMAIL',
+      messageText,
+      recipientPhone,
+      recipientEmail,
     });
-    if (existing) {
+
+    if (delivery.alreadySent) {
       res.status(409).json({
         error: 'A notification for this query and channel has already been sent',
-        existingNotificationId: existing.notificationId,
-        status: existing.submissionStatus,
+        existingNotificationId: delivery.notification.notificationId,
+        status: delivery.notification.submissionStatus,
       });
       return;
     }
 
-    let sendResult: { success: boolean; providerMessageId?: string; status: string; errorMessage?: string };
-    let providerName: string;
-
-    if (channel === 'WHATSAPP') {
-      const adapter = cfg.WHATSAPP_PROVIDER === 'meta'
-        ? new MetaWhatsAppAdapter()
-        : new MockWhatsAppAdapter();
-      providerName = adapter.name;
-
-      const phone = recipientPhone || patient.phone;
-      sendResult = await adapter.send({
-        to: phone,
-        message: messageText,
-        patientName: patient.name,
-        claimId: query.claimId,
-        idempotencyKey,
-      });
-    } else {
-      const adapter = cfg.EMAIL_PROVIDER === 'smtp'
-        ? new SmtpEmailAdapter()
-        : new MockEmailAdapter();
-      providerName = adapter.name;
-
-      const email = recipientEmail || patient.email;
-      const emailResult = await adapter.send({
-        to: email,
-        subject: 'Insurance Claim — Additional Documents Required',
-        text: messageText,
-        idempotencyKey,
-      });
-      sendResult = emailResult;
-    }
-
-    const notificationId = `NTF-${uuidv4().slice(0, 8).toUpperCase()}`;
-    const notification = await NotificationModel.create({
-      notificationId,
-      patientId: query.patientId,
-      claimId: query.claimId,
-      queryId,
-      channel,
-      provider: providerName,
-      message: messageText,
-      providerMessageId: sendResult.providerMessageId,
-      submissionStatus: sendResult.status,
-      deliveryStatus: sendResult.status === 'SUBMITTED' ? 'SENT' : sendResult.status,
-      idempotencyKey,
-      errorMessage: sendResult.errorMessage,
-    });
-
-    await writeAudit({
-      actor: req.user!.userId,
-      action: 'NOTIFICATION_SENT',
-      resourceType: 'Notification',
-      resourceId: notificationId,
-      metadata: {
-        queryId, channel, provider: providerName,
-        status: sendResult.status,
-        hasRealMessageId: !!sendResult.providerMessageId,
-      },
-    });
-
-    res.status(201).json({ notification, sendResult });
+    res.status(201).json({ notification: delivery.notification, sendResult: delivery.sendResult });
   } catch (err) {
     console.error('[Notifications] Send error:', err);
     res.status(500).json({ error: 'Failed to send notification' });

@@ -189,7 +189,7 @@ export default function QueryDetailPage() {
   if (isLoading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Loading query…</div>;
   if (!data?.query) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--danger)' }}>Query not found</div>;
 
-  const { query, requirements } = data;
+  const { query, requirements, matches } = data;
   const missingCount = requirements.filter((r: Requirement) => r.status === 'MISSING').length;
   const matchedCount = requirements.filter((r: Requirement) => r.status === 'MATCHED').length;
   const reviewCount = requirements.filter((r: Requirement) => r.status === 'UNCERTAIN' || r.status === 'NEEDS_REVIEW').length;
@@ -305,7 +305,7 @@ export default function QueryDetailPage() {
               <RequirementCard
                 key={req._id}
                 req={req}
-                match={undefined}
+                match={matches.find((item) => item.requirementId === String(req._id))}
               />
             ))
           )}

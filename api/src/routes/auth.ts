@@ -4,12 +4,12 @@ import { v4 as uuidv4 } from 'uuid';
 import User from '../models/User';
 import { signToken } from '../lib/auth';
 import { writeAudit } from '../lib/audit';
-import { requireAuth, AuthRequest } from '../middleware/authMiddleware';
+import { requireAdmin, requireAuth, AuthRequest } from '../middleware/authMiddleware';
 
 const router = Router();
 
 /** POST /api/auth/register */
-router.post('/register', async (req: Request, res: Response) => {
+router.post('/register', requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
     const { email, password, name, role } = req.body as {
       email?: string;
@@ -44,7 +44,7 @@ router.post('/register', async (req: Request, res: Response) => {
     });
 
     await writeAudit({
-      actor: user.userId,
+      actor: req.user!.userId,
       action: 'USER_CREATED',
       resourceType: 'User',
       resourceId: user.userId,

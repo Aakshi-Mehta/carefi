@@ -5,7 +5,7 @@
  * All test inputs are synthetic — no real patient data.
  */
 
-import { extractRequirements } from '../../services/requirementExtractor';
+import { extractRequirements } from '../services/requirementExtractor';
 
 describe('Requirement Extraction', () => {
   // ---- Basic extraction tests ----

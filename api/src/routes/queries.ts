@@ -12,6 +12,7 @@ import { writeAudit } from '../lib/audit';
 import { extractPdfText } from '../services/pdfExtractor';
 import { extractRequirements } from '../services/requirementExtractor';
 import { matchRequirements } from '../services/documentMatcher';
+import { automateQueryResponse } from '../services/queryAutomation';
 
 const router = Router();
 
@@ -88,7 +89,13 @@ router.post('/', requireStaff, queryUpload.single('queryFile'), async (req: Auth
     // Update claim status
     await Claim.findOneAndUpdate({ claimId }, { status: 'QUERY_RECEIVED' });
 
-    res.status(201).json({ query, textPreview: extraction.text.slice(0, 300) });
+    const automation = await automateQueryResponse(queryId, req.user!.userId);
+    const processedQuery = await QueryModel.findOne({ queryId }).lean();
+    res.status(201).json({
+      query: processedQuery || query,
+      textPreview: extraction.text.slice(0, 300),
+      automation,
+    });
   } catch (err) {
     console.error('[Queries] Upload error:', err);
     res.status(500).json({ error: 'Failed to upload query' });
@@ -126,7 +133,8 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       Requirement.find({ queryId: req.params.id }).lean(),
     ]);
     if (!query) { res.status(404).json({ error: 'Query not found' }); return; }
-    res.json({ query, requirements });
+    const matches = await Match.find({ requirementId: { $in: requirements.map((item) => String(item._id)) } }).lean();
+    res.json({ query, requirements, matches });
   } catch {
     res.status(500).json({ error: 'Failed to fetch query' });
   }

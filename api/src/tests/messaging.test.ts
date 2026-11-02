@@ -5,8 +5,8 @@
  * No real API calls are made in these unit tests.
  */
 
-import { MockWhatsAppAdapter } from '../../adapters/whatsapp/MockWhatsAppAdapter';
-import { GupshupWhatsAppAdapter } from '../../adapters/whatsapp/GupshupWhatsAppAdapter';
+import { MockWhatsAppAdapter } from '../adapters/whatsapp/MockWhatsAppAdapter';
+import { GupshupWhatsAppAdapter } from '../adapters/whatsapp/GupshupWhatsAppAdapter';
 
 const MOCK_PAYLOAD = {
   to: '+919876500001',
@@ -84,14 +84,14 @@ describe('MetaWhatsAppAdapter — no credentials (unit test)', () => {
 
   test('returns NOT_CONFIGURED when credentials missing', async () => {
     // Reset config cache
-    const { _resetConfig } = require('../../lib/env');
+    const { _resetConfig } = require('../lib/env');
     _resetConfig();
 
     process.env.NODE_ENV = 'test';
     process.env.WHATSAPP_PROVIDER = 'mock';
     process.env.DRIVE_PROVIDER = 'demo';
 
-    const { MetaWhatsAppAdapter } = require('../../adapters/whatsapp/MetaWhatsAppAdapter');
+    const { MetaWhatsAppAdapter } = require('../adapters/whatsapp/MetaWhatsAppAdapter');
     const adapter = new MetaWhatsAppAdapter();
 
     expect(adapter.isConfigured).toBe(false);
@@ -103,7 +103,7 @@ describe('MetaWhatsAppAdapter — no credentials (unit test)', () => {
 });
 
 describe('Notification Generator', () => {
-  const { generateNotification } = require('../../services/notificationGenerator');
+  const { generateNotification } = require('../services/notificationGenerator');
 
   const mockRequirements = [
     {
@@ -137,6 +137,7 @@ describe('Notification Generator', () => {
     expect(result.message).toContain('Aarav Sharma');
     expect(result.message).toContain("Treating doctor's prescription");
     expect(result.message).toContain('Investigation reports');
+    expect(result.message).toContain('asked for these specific documents');
     expect(result.message).toContain('Demo Hospital');
   });
 

@@ -51,7 +51,18 @@ function UploadQueryModal({ onClose }: { onClose: () => void }) {
       return queriesApi.upload(fd);
     },
     onSuccess: (res) => {
-      toast.success(`Query uploaded: ${res.data.query.queryId}`);
+      const { automation } = res.data;
+      const channelSummary = automation.channels
+        .map(({ channel, status }) => `${channel}: ${status}`)
+        .join(', ');
+      const resultMessage = channelSummary || automation.detail || automation.status;
+      if (automation.status === 'FAILED') {
+        toast.error(`Query saved, but automatic processing failed: ${resultMessage}`);
+      } else if (automation.status === 'NEEDS_REVIEW') {
+        toast(`Query saved and needs review: ${resultMessage}`, { icon: '⚠️' });
+      } else {
+        toast.success(`Query ${res.data.query.queryId} processed: ${resultMessage}`);
+      }
       qc.invalidateQueries({ queryKey: ['queries'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       onClose();

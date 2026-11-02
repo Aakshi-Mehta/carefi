@@ -14,9 +14,7 @@ export class MockWhatsAppAdapter implements NotificationProvider {
   readonly isConfigured = true; // Always available — no credentials needed
 
   async send(payload: MessagePayload): Promise<SendResult> {
-    console.log('[MockWhatsApp] SIMULATED send to:', payload.to);
-    console.log('[MockWhatsApp] Message:', payload.message.slice(0, 100) + '...');
-    console.log('[MockWhatsApp] Idempotency key:', payload.idempotencyKey);
+    console.log('[MockWhatsApp] SIMULATED message; no external send occurred.');
 
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 150));

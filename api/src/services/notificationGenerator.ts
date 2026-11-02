@@ -69,7 +69,7 @@ export function generateNotification(params: {
   const message = [
     `Dear ${patientName},`,
     '',
-    'We require a few additional documents to proceed with your insurance claim.',
+    'Your insurer asked for these specific documents so they can continue reviewing your claim:',
     '',
     'Please share the following documents:',
     '',

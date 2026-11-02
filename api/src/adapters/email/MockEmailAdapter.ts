@@ -5,9 +5,7 @@ export class MockEmailAdapter implements EmailProvider {
   readonly isConfigured = true;
 
   async send(payload: EmailPayload): Promise<EmailSendResult> {
-    console.log('[MockEmail] SIMULATED email to:', payload.to);
-    console.log('[MockEmail] Subject:', payload.subject);
-    console.log('[MockEmail] Idempotency key:', payload.idempotencyKey);
+    console.log('[MockEmail] SIMULATED email; no external send occurred.');
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 

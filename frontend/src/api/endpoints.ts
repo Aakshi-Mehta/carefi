@@ -58,9 +58,20 @@ export const queriesApi = {
   list: (params?: { patientId?: string; claimId?: string; status?: string; page?: number }) =>
     api.get<PaginatedResponse<Query>>('/queries', { params }),
   get: (id: string) =>
-    api.get<{ query: Query; requirements: Requirement[] }>(`/queries/${id}`),
+    api.get<{ query: Query; requirements: Requirement[]; matches: Match[] }>(`/queries/${id}`),
   upload: (formData: FormData) =>
-    api.post<{ query: Query; textPreview: string }>('/queries', formData, {
+    api.post<{
+      query: Query;
+      textPreview: string;
+      automation: {
+        status: 'COMPLETED' | 'NEEDS_REVIEW' | 'FAILED';
+        requirementCount: number;
+        matchedCount: number;
+        missingCount: number;
+        channels: Array<{ channel: 'WHATSAPP' | 'EMAIL'; status: string; errorMessage?: string }>;
+        detail?: string;
+      };
+    }>('/queries', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
   extract: (id: string) =>

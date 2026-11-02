@@ -5,9 +5,9 @@
  * Uses synthetic data only — no real patient information.
  */
 
-import { matchRequirements } from '../../services/documentMatcher';
-import type { IRequirement } from '../../models/Requirement';
-import type { IDocument } from '../../models/Document';
+import { matchRequirements } from '../services/documentMatcher';
+import type { IRequirement } from '../models/Requirement';
+import type { IDocument } from '../models/Document';
 
 function makeRequirement(overrides: Partial<IRequirement> = {}): IRequirement {
   return {

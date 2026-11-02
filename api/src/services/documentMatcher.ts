@@ -187,7 +187,7 @@ function buildMatchResult(
 
   return {
     requirementId: String(requirement._id),
-    documentId: String(doc._id),
+    documentId: doc.documentId,
     matchReason: `${matchType}: Document category "${doc.category}" matches requirement "${requirement.normalizedCategory}". Confidence: ${(score * 100).toFixed(0)}%.`,
     evidence,
     confidence: score,
