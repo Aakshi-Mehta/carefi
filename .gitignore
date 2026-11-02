@@ -1,0 +1,30 @@
+# Environment — NEVER commit real secrets
+.env
+.env.local
+.env.production
+
+# Dependencies
+node_modules/
+frontend/node_modules/
+api/node_modules/
+
+# Build outputs
+frontend/dist/
+api/dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Vercel
+.vercel/
+
+# TypeScript
+*.tsbuildinfo
+
+# Test coverage
+coverage/
