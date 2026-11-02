@@ -22,7 +22,7 @@ export interface IRequirement extends Document {
 
 const requirementSchema = new Schema<IRequirement>(
   {
-    requirementId: { type: String, required: true, unique: true, index: true },
+    requirementId: { type: String, required: true, unique: true },
     queryId: { type: String, required: true, index: true },
     originalText: { type: String, required: true },
     normalizedCategory: {

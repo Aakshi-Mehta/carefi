@@ -48,6 +48,5 @@ const notificationSchema = new Schema<INotification>(
 );
 
 notificationSchema.index({ patientId: 1, channel: 1 });
-notificationSchema.index({ idempotencyKey: 1 }, { unique: true });
 
 export default model<INotification>('Notification', notificationSchema);
