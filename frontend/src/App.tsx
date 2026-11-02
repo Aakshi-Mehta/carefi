@@ -28,8 +28,8 @@ const queryClient = new QueryClient({
 });
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  const token = useAuthStore((s) => s.token);
+  if (!token) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
 

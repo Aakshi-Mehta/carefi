@@ -28,17 +28,13 @@ interface AuthState {
   user: User | null;
   setAuth: (token: string, user: User) => void;
   logout: () => void;
-  isAuthenticated: boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       token: getStoredAuth().token,
       user: getStoredAuth().user,
-      get isAuthenticated() {
-        return !!get().token;
-      },
       setAuth: (token, user) => {
         window.localStorage.setItem(AUTH_TOKEN_KEY, token);
         window.localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
