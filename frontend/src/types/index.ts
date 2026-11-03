@@ -40,7 +40,7 @@ export type DocumentCategory =
   | 'GOVERNMENT_ID' | 'HEALTH_INSURANCE_CARD' | 'POLICY_DOCUMENT'
   | 'ADMISSION_RECORD' | 'DISCHARGE_SUMMARY' | 'PRESCRIPTION'
   | 'DIAGNOSTIC_REPORT' | 'LAB_REPORT' | 'HOSPITAL_BILL'
-  | 'PHARMACY_BILL' | 'INVESTIGATION_REPORT' | 'OTHER';
+  | 'PHARMACY_BILL' | 'INVESTIGATION_REPORT' | 'INSURER_QUERY' | 'OTHER';
 
 export type DocumentSource = 'UPLOAD' | 'GOOGLE_DRIVE' | 'DEMO';
 export type VerificationStatus = 'UNVERIFIED' | 'VERIFIED' | 'REJECTED';
@@ -54,6 +54,7 @@ export interface PatientDocument {
   category: DocumentCategory;
   mimeType: string;
   source: DocumentSource;
+  storageFileId?: string;
   driveFileId?: string;
   extractedText?: string;
   verificationStatus: VerificationStatus;
@@ -182,5 +183,6 @@ export const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
   HOSPITAL_BILL: 'Hospital Bill',
   PHARMACY_BILL: 'Pharmacy Bill',
   INVESTIGATION_REPORT: 'Investigation Report',
+  INSURER_QUERY: 'Insurer Query Letter',
   OTHER: 'Other',
 };

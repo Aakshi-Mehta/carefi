@@ -9,6 +9,7 @@ export interface IQuery extends Document {
   claimId: string;
   originalFileName: string;
   originalText: string;
+  storageFileId?: string;
   pageCount?: number;
   ocrUsed: boolean;
   extractionStatus: ExtractionStatus;
@@ -25,6 +26,7 @@ const querySchema = new Schema<IQuery>(
     claimId: { type: String, required: true, index: true },
     originalFileName: { type: String, required: true },
     originalText: { type: String, required: true },
+    storageFileId: { type: String },
     pageCount: { type: Number },
     ocrUsed: { type: Boolean, default: false },
     extractionStatus: {

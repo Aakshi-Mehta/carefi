@@ -163,10 +163,11 @@ export default function IntegrationsPage() {
               <li>Open "API Setup" to get the test phone number and temporary access token</li>
               <li>Add your personal number as a permitted test recipient (free — no business account needed)</li>
               <li>Copy the Phone Number ID and the temporary Access Token</li>
-              <li>Set <code>META_ACCESS_TOKEN</code>, <code>META_PHONE_NUMBER_ID</code>, <code>META_WEBHOOK_VERIFY_TOKEN</code> in your .env</li>
+              <li>Create and get approval for a message template with one body text parameter</li>
+              <li>Set <code>META_ACCESS_TOKEN</code>, <code>META_PHONE_NUMBER_ID</code>, <code>META_WEBHOOK_VERIFY_TOKEN</code>, <code>META_MESSAGE_TEMPLATE_NAME</code>, and <code>META_MESSAGE_TEMPLATE_LANGUAGE</code> in Render</li>
               <li>Set <code>WHATSAPP_PROVIDER=meta</code></li>
               <li>For webhooks: expose localhost with ngrok and configure <code>/api/webhooks/meta</code></li>
-              <li><strong>Note:</strong> The test number only supports verified test recipients. Free-form texts require a verified Business account.</li>
+              <li><strong>Note:</strong> The approved template must contain one body placeholder (<code>{'{{1}}'}</code>) for the generated patient message. Test numbers only reach permitted recipients.</li>
             </ol>
           }
         />

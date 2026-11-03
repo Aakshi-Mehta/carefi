@@ -6,6 +6,7 @@ import Patient from '../models/Patient';
 import { requireAuth, requireStaff, AuthRequest } from '../middleware/authMiddleware';
 import { writeAudit } from '../lib/audit';
 import { extractPdfText } from '../services/pdfExtractor';
+import { openPatientFile, storePatientFile } from '../services/patientFileStorage';
 import type { DocumentCategory } from '../models/Document';
 
 const router = Router();
@@ -28,7 +29,7 @@ const VALID_CATEGORIES: DocumentCategory[] = [
   'GOVERNMENT_ID', 'HEALTH_INSURANCE_CARD', 'POLICY_DOCUMENT',
   'ADMISSION_RECORD', 'DISCHARGE_SUMMARY', 'PRESCRIPTION',
   'DIAGNOSTIC_REPORT', 'LAB_REPORT', 'HOSPITAL_BILL',
-  'PHARMACY_BILL', 'INVESTIGATION_REPORT', 'OTHER',
+  'PHARMACY_BILL', 'INVESTIGATION_REPORT', 'INSURER_QUERY', 'OTHER',
 ];
 
 /** GET /api/documents */
@@ -102,6 +103,12 @@ router.post('/', requireStaff, upload.single('file'), async (req: AuthRequest, r
     }
 
     const documentId = `DOC-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const storageFileId = await storePatientFile({
+      buffer: req.file.buffer,
+      fileName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      metadata: { patientId, documentId, category },
+    });
     const doc = await DocumentModel.create({
       documentId,
       patientId,
@@ -110,6 +117,7 @@ router.post('/', requireStaff, upload.single('file'), async (req: AuthRequest, r
       category: category as DocumentCategory,
       mimeType: req.file.mimetype,
       source: 'UPLOAD',
+      storageFileId,
       extractedText,
       verificationStatus: 'UNVERIFIED',
       fileSize: req.file.size,
@@ -139,6 +147,34 @@ router.post('/', requireStaff, upload.single('file'), async (req: AuthRequest, r
       return;
     }
     res.status(500).json({ error: 'Failed to upload document' });
+  }
+});
+
+/** GET /api/documents/:id/file — authenticated download of the original file */
+router.get('/:id/file', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const doc = await DocumentModel.findOne({ documentId: req.params.id }).lean();
+    if (!doc?.storageFileId) {
+      res.status(404).json({ error: 'Stored document file not found' });
+      return;
+    }
+
+    const safeFileName = doc.fileName.replace(/[\r\n"]/g, '_');
+    res.setHeader('Content-Type', doc.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    const download = openPatientFile(doc.storageFileId);
+    download.on('error', (error) => {
+      console.error('[Documents] File download failed:', error.message);
+      if (!res.headersSent) res.status(404).json({ error: 'Stored document file not found' });
+      else res.destroy(error);
+    });
+    download.pipe(res);
+  } catch (error) {
+    console.error('[Documents] File download error:', (error as Error).message);
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to download document' });
   }
 });
 

@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useDropzone } from 'react-dropzone';
-import { FolderOpen, Upload, Filter, CheckCircle, XCircle } from 'lucide-react';
-import { documentsApi, patientsApi, claimsApi } from '../api/endpoints';
+import { FolderOpen, Upload, Filter, CheckCircle, XCircle, Download } from 'lucide-react';
+import { documentsApi, downloadDocumentFile, patientsApi, claimsApi } from '../api/endpoints';
 import type { PatientDocument, Patient, Claim } from '../types';
 import { DOCUMENT_CATEGORY_LABELS } from '../types';
 import toast from 'react-hot-toast';
@@ -275,8 +275,18 @@ export default function LockerPage() {
                         </span>
                       </td>
                       <td>
-                        {d.verificationStatus === 'UNVERIFIED' && (
-                          <div style={{ display: 'flex', gap: 4 }}>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                          {d.storageFileId && (
+                            <button
+                              className="btn btn-sm btn-outline"
+                              onClick={() => downloadDocumentFile(d.documentId, d.fileName).catch(() => toast.error('Download failed'))}
+                              title="Download original file"
+                            >
+                              <Download size={12} />
+                            </button>
+                          )}
+                          {d.verificationStatus === 'UNVERIFIED' && (
+                            <>
                             <button
                               className="btn btn-sm btn-outline"
                               style={{ color: 'var(--success)', borderColor: 'var(--success)', padding: '3px 8px' }}
@@ -293,9 +303,10 @@ export default function LockerPage() {
                             >
                               <XCircle size={12} />
                             </button>
-                          </div>
-                        )}
-                        {d.verificationStatus !== 'UNVERIFIED' && (
+                            </>
+                          )}
+                        </div>
+                        {d.verificationStatus !== 'UNVERIFIED' && !d.storageFileId && (
                           <span style={{ color: 'var(--text-secondary)', fontSize: 11 }}>—</span>
                         )}
                       </td>

@@ -12,6 +12,7 @@ export type DocumentCategory =
   | 'HOSPITAL_BILL'
   | 'PHARMACY_BILL'
   | 'INVESTIGATION_REPORT'
+  | 'INSURER_QUERY'
   | 'OTHER';
 
 export type DocumentSource = 'UPLOAD' | 'GOOGLE_DRIVE' | 'DEMO';
@@ -25,6 +26,7 @@ export interface IDocument extends Document {
   category: DocumentCategory;
   mimeType: string;
   source: DocumentSource;
+  storageFileId?: string;
   driveFileId?: string;
   extractedText?: string;
   verificationStatus: VerificationStatus;
@@ -47,7 +49,7 @@ const documentSchema = new Schema<IDocument>(
         'GOVERNMENT_ID', 'HEALTH_INSURANCE_CARD', 'POLICY_DOCUMENT',
         'ADMISSION_RECORD', 'DISCHARGE_SUMMARY', 'PRESCRIPTION',
         'DIAGNOSTIC_REPORT', 'LAB_REPORT', 'HOSPITAL_BILL',
-        'PHARMACY_BILL', 'INVESTIGATION_REPORT', 'OTHER',
+        'PHARMACY_BILL', 'INVESTIGATION_REPORT', 'INSURER_QUERY', 'OTHER',
       ],
       required: true,
     },
@@ -57,6 +59,7 @@ const documentSchema = new Schema<IDocument>(
       enum: ['UPLOAD', 'GOOGLE_DRIVE', 'DEMO'],
       default: 'UPLOAD',
     },
+    storageFileId: { type: String },
     driveFileId: { type: String },
     extractedText: { type: String },
     verificationStatus: {

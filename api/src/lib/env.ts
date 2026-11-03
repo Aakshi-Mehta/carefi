@@ -26,6 +26,8 @@ interface EnvConfig {
   META_GRAPH_API_VERSION: string;
   META_WEBHOOK_VERIFY_TOKEN?: string;
   META_APP_SECRET?: string;
+  META_MESSAGE_TEMPLATE_NAME?: string;
+  META_MESSAGE_TEMPLATE_LANGUAGE: string;
   EMAIL_HOST?: string;
   EMAIL_PORT?: number;
   EMAIL_SECURE?: boolean;
@@ -74,6 +76,7 @@ export function getConfig(): EnvConfig {
     requireEnv('META_ACCESS_TOKEN');
     requireEnv('META_PHONE_NUMBER_ID');
     requireEnv('META_WEBHOOK_VERIFY_TOKEN');
+    requireEnv('META_MESSAGE_TEMPLATE_NAME');
   }
   if (driveProvider === 'google') {
     requireEnv('GOOGLE_CLIENT_ID');
@@ -102,6 +105,8 @@ export function getConfig(): EnvConfig {
     META_GRAPH_API_VERSION: process.env.META_GRAPH_API_VERSION || 'v20.0',
     META_WEBHOOK_VERIFY_TOKEN: optionalEnv('META_WEBHOOK_VERIFY_TOKEN'),
     META_APP_SECRET: optionalEnv('META_APP_SECRET'),
+    META_MESSAGE_TEMPLATE_NAME: optionalEnv('META_MESSAGE_TEMPLATE_NAME'),
+    META_MESSAGE_TEMPLATE_LANGUAGE: process.env.META_MESSAGE_TEMPLATE_LANGUAGE || 'en_US',
     EMAIL_HOST: optionalEnv('EMAIL_HOST'),
     EMAIL_PORT: process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT, 10) : undefined,
     EMAIL_SECURE: process.env.EMAIL_SECURE === 'true',

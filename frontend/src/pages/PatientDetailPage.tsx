@@ -1,10 +1,11 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, User, Phone, Mail, FileText, FolderOpen, Search, MessageSquare } from 'lucide-react';
-import { patientsApi, claimsApi, documentsApi, queriesApi, notificationsApi } from '../api/endpoints';
+import { ArrowLeft, User, Phone, Mail, FileText, FolderOpen, Search, MessageSquare, Download } from 'lucide-react';
+import { patientsApi, claimsApi, documentsApi, downloadDocumentFile, queriesApi, notificationsApi } from '../api/endpoints';
 import type { Claim, PatientDocument, Query, Notification } from '../types';
 import { DOCUMENT_CATEGORY_LABELS } from '../types';
 import { format } from 'date-fns';
+import toast from 'react-hot-toast';
 
 const CLAIM_STATUS_BADGE: Record<string, string> = {
   OPEN: 'badge-gray',
@@ -159,7 +160,7 @@ export default function PatientDetailPage() {
             <div className="table-wrapper">
               <table>
                 <thead><tr>
-                  <th>File</th><th>Category</th><th>Claim</th><th>Source</th><th>Verified</th>
+                  <th>File</th><th>Category</th><th>Claim</th><th>Source</th><th>Verified</th><th></th>
                 </tr></thead>
                 <tbody>
                   {docsData?.data?.length ? docsData.data.map((d: PatientDocument) => (
@@ -169,9 +170,20 @@ export default function PatientDetailPage() {
                       <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{d.claimId || '—'}</td>
                       <td><span className="badge badge-gray">{d.source}</span></td>
                       <td><span className={`badge ${VERIFY_BADGE[d.verificationStatus]}`}>{d.verificationStatus}</span></td>
+                      <td>
+                        {d.storageFileId && (
+                          <button
+                            className="btn btn-outline btn-sm"
+                            onClick={() => downloadDocumentFile(d.documentId, d.fileName).catch(() => toast.error('Download failed'))}
+                            title="Download original file"
+                          >
+                            <Download size={12} />
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>No documents found</td></tr>
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>No documents found</td></tr>
                   )}
                 </tbody>
               </table>

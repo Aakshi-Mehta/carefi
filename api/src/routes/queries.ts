@@ -13,6 +13,7 @@ import { extractPdfText } from '../services/pdfExtractor';
 import { extractRequirements } from '../services/requirementExtractor';
 import { matchRequirements } from '../services/documentMatcher';
 import { automateQueryResponse } from '../services/queryAutomation';
+import { openPatientFile, storePatientFile } from '../services/patientFileStorage';
 
 const router = Router();
 
@@ -65,17 +66,40 @@ router.post('/', requireStaff, queryUpload.single('queryFile'), async (req: Auth
     }
 
     const queryId = `QRY-${uuidv4().slice(0, 8).toUpperCase()}`;
+    const storageFileId = await storePatientFile({
+      buffer: req.file.buffer,
+      fileName: req.file.originalname,
+      mimeType: req.file.mimetype,
+      metadata: { patientId, claimId, queryId, kind: 'INSURER_QUERY' },
+    });
     const query = await QueryModel.create({
       queryId,
       patientId,
       claimId,
       originalFileName: req.file.originalname,
       originalText: extraction.text,
+      storageFileId,
       pageCount: extraction.pageCount,
       ocrUsed: extraction.ocrUsed,
       extractionStatus: 'PENDING',
       matchingStatus: 'PENDING',
       uploadedBy: req.user!.userId,
+    });
+
+    await DocumentModel.create({
+      documentId: `DOC-${uuidv4().slice(0, 8).toUpperCase()}`,
+      patientId,
+      claimId,
+      fileName: req.file.originalname,
+      category: 'INSURER_QUERY',
+      mimeType: req.file.mimetype,
+      source: 'UPLOAD',
+      storageFileId,
+      extractedText: extraction.text,
+      verificationStatus: 'VERIFIED',
+      fileSize: req.file.size,
+      uploadedBy: req.user!.userId,
+      notes: `Original insurer query letter ${queryId}`,
     });
 
     await writeAudit({
@@ -99,6 +123,34 @@ router.post('/', requireStaff, queryUpload.single('queryFile'), async (req: Auth
   } catch (err) {
     console.error('[Queries] Upload error:', err);
     res.status(500).json({ error: 'Failed to upload query' });
+  }
+});
+
+/** GET /api/queries/:id/file — authenticated download of the original query letter */
+router.get('/:id/file', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const query = await QueryModel.findOne({ queryId: req.params.id }).lean();
+    if (!query?.storageFileId) {
+      res.status(404).json({ error: 'Stored query letter not found' });
+      return;
+    }
+
+    const safeFileName = query.originalFileName.replace(/[\r\n"]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeFileName}"`);
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+
+    const download = openPatientFile(query.storageFileId);
+    download.on('error', (error) => {
+      console.error('[Queries] File download failed:', error.message);
+      if (!res.headersSent) res.status(404).json({ error: 'Stored query letter not found' });
+      else res.destroy(error);
+    });
+    download.pipe(res);
+  } catch (error) {
+    console.error('[Queries] File download error:', (error as Error).message);
+    if (!res.headersSent) res.status(500).json({ error: 'Failed to download query letter' });
   }
 });
 

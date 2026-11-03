@@ -6,7 +6,7 @@
  *
  * IMPORTANT:
  * - Only sends if META_ACCESS_TOKEN, META_PHONE_NUMBER_ID are configured.
- * - Uses the official test template for the developer test number.
+ * - Uses an approved template for business-initiated notifications.
  * - Does NOT claim delivery unless an authenticated webhook confirms it.
  * - The test number only supports verified test recipients.
  * - No billing is enabled. Free developer test environment only.
@@ -33,7 +33,7 @@ export class MetaWhatsAppAdapter implements NotificationProvider {
 
   get isConfigured(): boolean {
     const cfg = getConfig();
-    return !!(cfg.META_ACCESS_TOKEN && cfg.META_PHONE_NUMBER_ID);
+    return !!(cfg.META_ACCESS_TOKEN && cfg.META_PHONE_NUMBER_ID && cfg.META_MESSAGE_TEMPLATE_NAME);
   }
 
   async send(payload: MessagePayload): Promise<SendResult> {
@@ -42,7 +42,7 @@ export class MetaWhatsAppAdapter implements NotificationProvider {
         success: false,
         status: 'NOT_CONFIGURED',
         errorMessage:
-          'META_ACCESS_TOKEN or META_PHONE_NUMBER_ID is not configured. ' +
+          'META_ACCESS_TOKEN, META_PHONE_NUMBER_ID, and META_MESSAGE_TEMPLATE_NAME must be configured. ' +
           'See INTEGRATIONS.md for setup instructions.',
       };
     }
@@ -52,19 +52,27 @@ export class MetaWhatsAppAdapter implements NotificationProvider {
     const phoneNumberId = cfg.META_PHONE_NUMBER_ID;
     const url = `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;
 
+    if (payload.message.length > 1024) {
+      return {
+        success: false,
+        status: 'FAILED',
+        errorMessage: 'The notification is too long for the configured WhatsApp template parameter.',
+      };
+    }
+
     try {
-      // NOTE: The Meta test number ONLY supports the official "hello_world" template
-      // or templates pre-approved on the developer account.
-      // Free-form text messages require a verified Business account.
-      // We use the template approach for test environment compatibility.
       const requestBody = {
         messaging_product: 'whatsapp',
         recipient_type: 'individual',
         to: payload.to,
-        type: 'text',
-        text: {
-          body: payload.message,
-          preview_url: false,
+        type: 'template',
+        template: {
+          name: cfg.META_MESSAGE_TEMPLATE_NAME,
+          language: { code: cfg.META_MESSAGE_TEMPLATE_LANGUAGE },
+          components: [{
+            type: 'body',
+            parameters: [{ type: 'text', text: payload.message }],
+          }],
         },
       };
 

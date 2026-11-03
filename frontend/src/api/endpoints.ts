@@ -45,6 +45,7 @@ export const documentsApi = {
   list: (params?: { patientId?: string; claimId?: string; category?: string; page?: number }) =>
     api.get<PaginatedResponse<PatientDocument>>('/documents', { params }),
   get: (id: string) => api.get<PatientDocument>(`/documents/${id}`),
+  downloadFile: (id: string) => api.get<Blob>(`/documents/${id}/file`, { responseType: 'blob' }),
   upload: (formData: FormData) =>
     api.post<PatientDocument>('/documents', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -52,6 +53,16 @@ export const documentsApi = {
   verify: (id: string, status: 'VERIFIED' | 'REJECTED') =>
     api.post<PatientDocument>(`/documents/${id}/verify`, { status }),
 };
+
+export async function downloadDocumentFile(documentId: string, fileName: string): Promise<void> {
+  const response = await documentsApi.downloadFile(documentId);
+  const objectUrl = URL.createObjectURL(response.data);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
 
 // ---- Queries ----
 export const queriesApi = {
