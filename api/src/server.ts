@@ -10,6 +10,7 @@ dotenv.config();
 
 import { getConfig } from './lib/env';
 import { connectDB } from './lib/db';
+import { ensureBootstrapAdmin } from './services/bootstrapAdmin';
 
 // Routes
 import authRouter from './routes/auth';
@@ -112,6 +113,12 @@ async function start() {
     if (cfg.DEMO_MODE) {
       const { seedDemoData } = await import('./seedDemo');
       await seedDemoData();
+    } else if (cfg.NODE_ENV === 'production') {
+      await ensureBootstrapAdmin({
+        email: cfg.BOOTSTRAP_ADMIN_EMAIL,
+        password: cfg.BOOTSTRAP_ADMIN_PASSWORD,
+        name: cfg.BOOTSTRAP_ADMIN_NAME,
+      });
     }
 
     app.listen(cfg.PORT, () => {

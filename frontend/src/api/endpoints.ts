@@ -3,15 +3,15 @@
 import api from './client';
 import type {
   Patient, Claim, PatientDocument, Query, Requirement, Notification,
-  AuditLog, DashboardStats, PaginatedResponse, IntegrationStatus, Match,
+  AuditLog, DashboardStats, PaginatedResponse, IntegrationStatus, Match, User,
 } from '../types';
 
 // ---- Auth ----
 export const authApi = {
   login: (email: string, password: string) =>
     api.post<{ token: string; user: { userId: string; email: string; name: string; role: 'admin' | 'staff' | 'reviewer' } }>('/auth/login', { email, password }),
-  register: (data: { email: string; password: string; name: string; role?: string }) =>
-    api.post('/auth/register', data),
+  register: (data: { email: string; password: string; name: string; role?: 'staff' | 'reviewer' }) =>
+    api.post<{ user: User }>('/auth/register', data),
   me: () => api.get('/auth/me'),
 };
 

@@ -12,6 +12,9 @@ interface EnvConfig {
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
   DEMO_MODE: boolean;
+  BOOTSTRAP_ADMIN_EMAIL?: string;
+  BOOTSTRAP_ADMIN_PASSWORD?: string;
+  BOOTSTRAP_ADMIN_NAME?: string;
   WHATSAPP_PROVIDER: 'meta' | 'mock';
   DRIVE_PROVIDER: 'google' | 'demo';
   EMAIL_PROVIDER: 'smtp' | 'mock';
@@ -71,6 +74,11 @@ export function getConfig(): EnvConfig {
   const driveProvider = (process.env.DRIVE_PROVIDER || 'demo') as 'google' | 'demo';
   const emailProvider = (process.env.EMAIL_PROVIDER || 'mock') as 'smtp' | 'mock';
 
+  const bootstrapAdminPassword = optionalEnv('BOOTSTRAP_ADMIN_PASSWORD');
+  if (bootstrapAdminPassword && bootstrapAdminPassword.length < 16) {
+    throw new Error('BOOTSTRAP_ADMIN_PASSWORD must be at least 16 characters');
+  }
+
   // Validate provider-specific required vars
   if (whatsappProvider === 'meta') {
     requireEnv('META_ACCESS_TOKEN');
@@ -92,6 +100,9 @@ export function getConfig(): EnvConfig {
     JWT_SECRET,
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
     DEMO_MODE: isDemo,
+    BOOTSTRAP_ADMIN_EMAIL: optionalEnv('BOOTSTRAP_ADMIN_EMAIL'),
+    BOOTSTRAP_ADMIN_PASSWORD: bootstrapAdminPassword,
+    BOOTSTRAP_ADMIN_NAME: optionalEnv('BOOTSTRAP_ADMIN_NAME'),
     WHATSAPP_PROVIDER: whatsappProvider,
     DRIVE_PROVIDER: driveProvider,
     EMAIL_PROVIDER: emailProvider,
