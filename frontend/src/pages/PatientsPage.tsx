@@ -76,7 +76,7 @@ function CreatePatientModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="modal-body">
           <div className="notice-banner demo" style={{ marginBottom: 16 }}>
-            ⚠️ Use only synthetic/fictional patient data in demo mode.
+            ⚠️ Use fictional patient details only. Do not enter real patient information.
           </div>
           {(['name', 'phone', 'email'] as const).map((field) => (
             <div key={field} style={{ marginBottom: 14 }}>

@@ -82,7 +82,7 @@ function UploadQueryModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="modal-body">
           <div className="notice-banner demo" style={{ marginBottom: 16 }}>
-            ⚠️ Upload synthetic query letters only in demo mode.
+            ⚠️ Upload fictional query letters only. Do not include real patient information.
           </div>
 
           <div

@@ -333,7 +333,7 @@ export default function QueryDetailPage() {
               </div>
               <div style={{ padding: '12px 14px' }}>
                 <div className="notice-banner info" style={{ marginBottom: 12 }}>
-                  <span>ℹ️ Review this message before sending. It will be labelled SIMULATED in demo mode.</span>
+                  <span>ℹ️ Review the message before sending. SIMULATED means it was not delivered to the patient.</span>
                 </div>
 
                 <label className="form-label">Channel</label>

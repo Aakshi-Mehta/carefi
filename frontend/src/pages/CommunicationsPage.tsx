@@ -51,7 +51,7 @@ export default function CommunicationsPage() {
           <span className="badge badge-gray">{total} total</span>
         </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
-          Patient notification history. All demo messages are labelled SIMULATED — no real messages sent.
+          Patient notification history. SIMULATED means no message was sent to the recipient.
         </p>
       </div>
 

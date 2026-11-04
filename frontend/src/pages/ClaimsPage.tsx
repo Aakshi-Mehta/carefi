@@ -64,11 +64,11 @@ function CreateClaimModal({ onClose }: { onClose: () => void }) {
           </div>
           <div style={{ marginBottom: 14 }}>
             <label className="form-label">Insurer</label>
-            <input id="new-claim-insurer" className="input" value={form.insurer} onChange={(e) => setForm((f) => ({ ...f, insurer: e.target.value }))} placeholder="Demo Health Insurance" />
+            <input id="new-claim-insurer" className="input" value={form.insurer} onChange={(e) => setForm((f) => ({ ...f, insurer: e.target.value }))} placeholder="e.g. Northstar Health" />
           </div>
           <div style={{ marginBottom: 14 }}>
             <label className="form-label">Hospital</label>
-            <input id="new-claim-hospital" className="input" value={form.hospital} onChange={(e) => setForm((f) => ({ ...f, hospital: e.target.value }))} placeholder="Demo Multispeciality Hospital" />
+            <input id="new-claim-hospital" className="input" value={form.hospital} onChange={(e) => setForm((f) => ({ ...f, hospital: e.target.value }))} placeholder="e.g. City General Hospital" />
           </div>
         </div>
         <div className="modal-footer">

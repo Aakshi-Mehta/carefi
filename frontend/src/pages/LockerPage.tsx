@@ -81,7 +81,7 @@ function UploadModal({ onClose }: { onClose: () => void }) {
         </div>
         <div className="modal-body">
           <div className="notice-banner demo" style={{ marginBottom: 16 }}>
-            ⚠️ Do not upload real patient data in demo mode.
+            ⚠️ Use fictional documents only. Do not upload real patient information.
           </div>
 
           {/* Dropzone */}

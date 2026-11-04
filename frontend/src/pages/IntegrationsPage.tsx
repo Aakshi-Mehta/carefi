@@ -15,14 +15,15 @@ function IntegrationCard({
 }) {
   const isReallyConnected = configured && connected;
   const statusColor = isReallyConnected ? 'var(--success)' : configured ? 'var(--warning)' : 'var(--text-secondary)';
-  const statusLabel = isReallyConnected ? 'Connected' : configured ? 'Configured (not tested)' : mode === 'mock' || mode === 'demo' ? 'Demo Mode' : 'Not Configured';
+  const isSimulated = mode === 'mock' || mode === 'demo';
+  const statusLabel = isReallyConnected ? 'Connected' : configured ? 'Configured (not tested)' : isSimulated ? 'Simulated' : 'Not Configured';
 
   return (
     <div className="card" style={{ padding: 22 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
         <div>
           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text-primary)' }}>{name}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Provider: {provider}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>Provider: {isSimulated ? 'Simulated' : provider}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, color: statusColor }}>
           {isReallyConnected ? <CheckCircle size={14} /> : <XCircle size={14} />}
@@ -30,10 +31,10 @@ function IntegrationCard({
         </div>
       </div>
 
-      {mode === 'mock' || mode === 'demo' ? (
+      {isSimulated ? (
         <div className="notice-banner demo" style={{ marginBottom: 12 }}>
           <AlertCircle size={13} />
-          <span>Running in <strong>{mode.toUpperCase()} mode</strong>. No real {name.split(' ')[0]} connection. Messages are simulated and labelled accordingly.</span>
+          <span>This integration is simulated. No live connection to {name} is active.</span>
         </div>
       ) : null}
 
@@ -115,11 +116,11 @@ export default function IntegrationsPage() {
           <h1 style={{ fontSize: 20, fontWeight: 700 }}>Integrations</h1>
         </div>
         <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>
-          Integration status is reported honestly. Green Connected = verified real API connection. Demo/Mock = no real connection.
+          Connected means a live API connection was verified. Simulated or unconfigured integrations are not connected to external services.
         </p>
         {data?.demoMode && (
           <div className="notice-banner demo" style={{ marginTop: 12 }}>
-            ⚠️ <strong>DEMO_MODE=true</strong> — All integrations use mock/demo adapters. No real external services are connected.
+            ⚠️ This sandbox uses sample data. Check each integration below to see whether it has a verified live connection.
           </div>
         )}
       </div>
@@ -127,7 +128,7 @@ export default function IntegrationsPage() {
       <div className="page-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 16 }}>
         <IntegrationCard
           name="Google Drive"
-          provider={data?.drive?.provider || 'DemoDriveAdapter'}
+          provider={data?.drive?.provider || 'Simulated'}
           configured={data?.drive?.configured || false}
           mode={data?.drive?.mode || 'demo'}
           connected={data?.drive?.connected || false}
@@ -149,7 +150,7 @@ export default function IntegrationsPage() {
 
         <IntegrationCard
           name="Meta WhatsApp Cloud API"
-          provider={data?.whatsapp?.provider || 'MockWhatsAppAdapter'}
+          provider={data?.whatsapp?.provider || 'Simulated'}
           configured={data?.whatsapp?.configured || false}
           mode={data?.whatsapp?.mode || 'mock'}
           connected={data?.whatsapp?.connected || false}
@@ -174,7 +175,7 @@ export default function IntegrationsPage() {
 
         <IntegrationCard
           name="Email"
-          provider={data?.email?.provider || 'MockEmailAdapter'}
+          provider={data?.email?.provider || 'Simulated'}
           configured={data?.email?.configured || false}
           mode={data?.email?.mode || 'mock'}
           connected={data?.email?.connected || false}

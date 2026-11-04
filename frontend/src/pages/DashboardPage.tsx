@@ -92,7 +92,7 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="badge badge-warning" style={{ fontSize: 12 }}>
-            ⚠️ Demo Mode — Synthetic Data Only
+            ⚠️ Sandbox — Synthetic Data Only
           </div>
         </div>
       </div>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                     <ActivityRow key={log._id} log={log} />
                   ))
                 ) : (
-                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>No activity yet. Seed demo data or start working.</td></tr>
+                  <tr><td colSpan={4} style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>No activity yet. Add a patient or upload a query letter.</td></tr>
                 )}
               </tbody>
             </table>

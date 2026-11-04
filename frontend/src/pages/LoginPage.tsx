@@ -62,8 +62,8 @@ export default function LoginPage() {
           <div className="notice-banner demo" style={{ marginBottom: 20 }}>
             <span>⚠️</span>
             <span>
-              <strong>Demo mode active.</strong> Pre-filled with synthetic test credentials.
-              This is NOT a real system — do not enter real patient data.
+              <strong>Sandbox environment.</strong> Pre-filled with test credentials.
+              Use fictional patient data only.
             </span>
           </div>
 
@@ -131,7 +131,7 @@ export default function LoginPage() {
 
         <p style={{ textAlign: 'center', color: '#94A3B8', fontSize: 11, marginTop: 20 }}>
           RevNow Query Intelligence — Proposed Feature Module for Care.fi<br />
-          Assignment demo only. Not approved for real patient data.
+          Assignment prototype. Not approved for real patient data.
         </p>
       </div>
     </div>
