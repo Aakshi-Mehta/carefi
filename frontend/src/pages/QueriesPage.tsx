@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Search, Upload, Filter, Eye, Activity, CheckCircle } from 'lucide-react';
 import { useDropzone } from 'react-dropzone';
 import { queriesApi, patientsApi, claimsApi } from '../api/endpoints';
@@ -16,11 +16,18 @@ const EXTRACT_BADGE: Record<string, string> = {
   NEEDS_REVIEW: 'badge-warning',
 };
 
-function UploadQueryModal({ onClose }: { onClose: () => void }) {
+function UploadQueryModal({
+  onClose, initialPatientId = '', initialClaimId = '', onUploaded,
+}: {
+  onClose: () => void;
+  initialPatientId?: string;
+  initialClaimId?: string;
+  onUploaded: (queryId: string) => void;
+}) {
   const qc = useQueryClient();
   const [file, setFile] = useState<File | null>(null);
-  const [patientId, setPatientId] = useState('');
-  const [claimId, setClaimId] = useState('');
+  const [patientId, setPatientId] = useState(initialPatientId);
+  const [claimId, setClaimId] = useState(initialClaimId);
 
   const { data: patientsData } = useQuery({
     queryKey: ['patients-all'],
@@ -56,16 +63,26 @@ function UploadQueryModal({ onClose }: { onClose: () => void }) {
         .map(({ channel, status }) => `${channel}: ${status}`)
         .join(', ');
       const resultMessage = channelSummary || automation.detail || automation.status;
+      const deliveryFailed = automation.channels.some(({ status }) =>
+        status === 'FAILED' || status === 'NOT_CONFIGURED'
+      );
+      const deliverySimulated = automation.channels.some(({ status }) => status === 'SIMULATED');
       if (automation.status === 'FAILED') {
         toast.error(`Query saved, but automatic processing failed: ${resultMessage}`);
       } else if (automation.status === 'NEEDS_REVIEW') {
         toast(`Query saved and needs review: ${resultMessage}`, { icon: '⚠️' });
+      } else if (deliveryFailed) {
+        toast.error(`Query processed, but one or more channels need attention: ${resultMessage}`);
+      } else if (deliverySimulated) {
+        toast(`Query processed. Messages were simulated and not delivered: ${resultMessage}`, { icon: '⚠️' });
       } else {
         toast.success(`Query ${res.data.query.queryId} processed: ${resultMessage}`);
       }
       qc.invalidateQueries({ queryKey: ['queries'] });
+      qc.invalidateQueries({ queryKey: ['queries', patientId] });
+      qc.invalidateQueries({ queryKey: ['documents', patientId] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
-      onClose();
+      onUploaded(res.data.query.queryId);
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
@@ -143,17 +160,20 @@ function UploadQueryModal({ onClose }: { onClose: () => void }) {
 }
 
 export default function QueriesPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('');
   const [page, setPage] = useState(1);
-  const [showUpload, setShowUpload] = useState(false);
+  const [showUpload, setShowUpload] = useState(() => searchParams.get('upload') === '1');
   const qc = useQueryClient();
 
+  const patientId = searchParams.get('patientId') || undefined;
   const claimId = searchParams.get('claimId') || undefined;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['queries', statusFilter, page, claimId],
+    queryKey: ['queries', statusFilter, page, patientId, claimId],
     queryFn: () => queriesApi.list({
+      patientId,
       status: statusFilter || undefined,
       claimId,
       page,
@@ -197,6 +217,7 @@ export default function QueriesPage() {
             <Search size={20} color="var(--primary-navy)" />
             <h1 style={{ fontSize: 20, fontWeight: 700 }}>Insurer Queries</h1>
             <span className="badge badge-gray">{total} total</span>
+            {patientId && <span className="badge badge-info">Patient: {patientId}</span>}
             {claimId && <span className="badge badge-info">Filtered: {claimId}</span>}
           </div>
           <button id="upload-query-btn" className="btn btn-primary" onClick={() => setShowUpload(true)}>
@@ -292,7 +313,21 @@ export default function QueriesPage() {
         </div>
       </div>
 
-      {showUpload && <UploadQueryModal onClose={() => setShowUpload(false)} />}
+      {showUpload && (
+        <UploadQueryModal
+          initialPatientId={patientId}
+          initialClaimId={claimId}
+          onClose={() => {
+            setShowUpload(false);
+            if (searchParams.has('upload')) {
+              const nextParams = new URLSearchParams(searchParams);
+              nextParams.delete('upload');
+              setSearchParams(nextParams, { replace: true });
+            }
+          }}
+          onUploaded={(queryId) => navigate(`/queries/${queryId}`)}
+        />
+      )}
     </div>
   );
 }

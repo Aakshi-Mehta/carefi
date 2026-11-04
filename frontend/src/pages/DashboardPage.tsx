@@ -105,6 +105,32 @@ export default function DashboardPage() {
           </div>
         )}
 
+        <div className="card" style={{ padding: '18px 20px', marginBottom: 24 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Start here</div>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
+            Follow these steps to process an insurer query. Uploading a query automatically extracts requests,
+            checks the patient locker, and attempts both configured message channels.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
+            {[
+              { step: '1', title: 'Create or find a patient', detail: 'Open the patient profile.', to: '/patients' },
+              { step: '2', title: 'Add a claim and documents', detail: 'Link existing records to the patient and claim.', to: '/claims' },
+              { step: '3', title: 'Upload the insurer query', detail: 'Start from the patient’s claim or query list.', to: '/queries' },
+              { step: '4', title: 'Review the outcome', detail: 'Check extracted items, matches, and channel status.', to: '/queries' },
+            ].map(({ step, title, detail, to }) => (
+              <Link key={step} to={to} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, border: '1px solid var(--border)', borderRadius: 8, height: '100%' }}>
+                  <span className="badge badge-info">{step}</span>
+                  <span>
+                    <span style={{ display: 'block', fontWeight: 600, fontSize: 13 }}>{title}</span>
+                    <span style={{ display: 'block', color: 'var(--text-secondary)', fontSize: 12, marginTop: 4 }}>{detail}</span>
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* Stats grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
           <StatCard label="Total Patients" value={isLoading ? '—' : stats.totalPatients} icon={<Users size={18} />} color="#102A43" link="/patients" />

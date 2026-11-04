@@ -14,9 +14,9 @@ function IntegrationCard({
   setupInstructions?: React.ReactNode;
 }) {
   const isReallyConnected = configured && connected;
-  const statusColor = isReallyConnected ? 'var(--success)' : configured ? 'var(--warning)' : 'var(--text-secondary)';
   const isSimulated = mode === 'mock' || mode === 'demo';
-  const statusLabel = isReallyConnected ? 'Connected' : configured ? 'Configured (not tested)' : isSimulated ? 'Simulated' : 'Not Configured';
+  const statusColor = isReallyConnected ? 'var(--success)' : configured || isSimulated ? 'var(--warning)' : 'var(--text-secondary)';
+  const statusLabel = isReallyConnected ? 'Connected' : isSimulated ? 'Simulated' : configured ? 'Configured (not tested)' : 'Not Configured';
 
   return (
     <div className="card" style={{ padding: 22 }}>
@@ -69,7 +69,7 @@ function IntegrationCard({
 }
 
 export default function IntegrationsPage() {
-  const { data, isLoading, refetch } = useQuery({
+  const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['integrations'],
     queryFn: () => integrationsApi.status().then((r) => r.data as IntegrationStatus),
   });
@@ -107,6 +107,17 @@ export default function IntegrationsPage() {
   });
 
   if (isLoading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Loading integrations…</div>;
+  if (error || !data) {
+    return (
+      <div className="page-body">
+        <div className="notice-banner error">
+          <AlertCircle size={14} />
+          <span>Could not load integration status. No connection state is being assumed.</span>
+          <button className="btn btn-outline btn-sm" onClick={() => refetch()}>Retry</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fade-in">

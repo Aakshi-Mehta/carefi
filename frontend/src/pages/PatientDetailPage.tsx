@@ -1,6 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, User, Phone, Mail, FileText, FolderOpen, Search, MessageSquare, Download } from 'lucide-react';
+import { ArrowLeft, User, Phone, Mail, FileText, FolderOpen, Search, MessageSquare, Download, Upload } from 'lucide-react';
 import { patientsApi, claimsApi, documentsApi, downloadDocumentFile, queriesApi, notificationsApi } from '../api/endpoints';
 import type { Claim, PatientDocument, Query, Notification } from '../types';
 import { DOCUMENT_CATEGORY_LABELS } from '../types';
@@ -138,13 +138,20 @@ export default function PatientDetailPage() {
                       <td style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{c.hospital}</td>
                       <td><span className={`badge ${CLAIM_STATUS_BADGE[c.status] || 'badge-gray'}`}>{c.status.replace(/_/g, ' ')}</span></td>
                       <td>
-                        <Link to={`/queries?claimId=${c.claimId}`} className="btn btn-outline btn-sm">
-                          <Search size={11} /> Queries
-                        </Link>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <Link to={`/queries?patientId=${encodeURIComponent(patient.patientId)}&claimId=${encodeURIComponent(c.claimId)}`} className="btn btn-outline btn-sm">
+                            <Search size={11} /> Queries
+                          </Link>
+                          <Link to={`/queries?patientId=${encodeURIComponent(patient.patientId)}&claimId=${encodeURIComponent(c.claimId)}&upload=1`} className="btn btn-primary btn-sm">
+                            <Upload size={11} /> Upload Query
+                          </Link>
+                        </div>
                       </td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>No claims found</td></tr>
+                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>
+                      No claims yet. <Link to="/claims" style={{ color: 'var(--primary-teal)' }}>Create a claim</Link> before uploading an insurer query.
+                    </td></tr>
                   )}
                 </tbody>
               </table>
@@ -230,7 +237,7 @@ export default function PatientDetailPage() {
             <div className="table-wrapper">
               <table>
                 <thead><tr>
-                  <th>ID</th><th>Channel</th><th>Provider</th><th>Submission</th><th>Delivery</th>
+                  <th>ID</th><th>Channel</th><th>Provider</th><th>Submission</th><th>Delivery</th><th>Message</th>
                 </tr></thead>
                 <tbody>
                   {notifData?.data?.length ? notifData.data.map((n: Notification) => (
@@ -240,9 +247,15 @@ export default function PatientDetailPage() {
                       <td style={{ fontSize: 12 }}>{n.provider}</td>
                       <td><span className={`badge ${n.submissionStatus === 'SUBMITTED' ? 'badge-success' : n.submissionStatus === 'SIMULATED' ? 'badge-warning' : 'badge-danger'}`}>{n.submissionStatus}</span></td>
                       <td><span className={`badge ${n.deliveryStatus === 'DELIVERED' || n.deliveryStatus === 'READ' ? 'badge-success' : 'badge-gray'}`}>{n.deliveryStatus}</span></td>
+                      <td>
+                        <details>
+                          <summary style={{ cursor: 'pointer', color: 'var(--primary-teal)', fontSize: 12 }}>View message</summary>
+                          <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 12, maxWidth: 420 }}>{n.message}</pre>
+                        </details>
+                      </td>
                     </tr>
                   )) : (
-                    <tr><td colSpan={5} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>No notifications sent</td></tr>
+                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>No notifications recorded</td></tr>
                   )}
                 </tbody>
               </table>

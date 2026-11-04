@@ -99,7 +99,7 @@ export const notificationsApi = {
     api.post<{ message: string; notification: { message: string; missingDocuments: string[] }; readyToSend: boolean }>('/notifications/generate', { queryId }),
   send: (data: { queryId: string; channel: 'WHATSAPP' | 'EMAIL'; messageText: string; recipientPhone?: string; recipientEmail?: string }) =>
     api.post<{ notification: Notification; sendResult: unknown }>('/notifications/send', data),
-  list: (params?: { patientId?: string; queryId?: string; channel?: string; submissionStatus?: string; page?: number }) =>
+  list: (params?: { patientId?: string; queryId?: string; channel?: string; submissionStatus?: string; page?: number; limit?: number }) =>
     api.get<PaginatedResponse<Notification>>('/notifications', { params }),
   get: (id: string) => api.get<Notification>(`/notifications/${id}`),
 };

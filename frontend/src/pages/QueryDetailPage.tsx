@@ -6,7 +6,7 @@ import {
   MessageSquare, Send, CheckSquare, XSquare,
 } from 'lucide-react';
 import { queriesApi, notificationsApi } from '../api/endpoints';
-import type { Requirement, Match } from '../types';
+import type { Requirement, Match, Notification } from '../types';
 import { DOCUMENT_CATEGORY_LABELS } from '../types';
 import toast from 'react-hot-toast';
 
@@ -119,6 +119,12 @@ export default function QueryDetailPage() {
     enabled: !!id,
   });
 
+  const { data: notificationData, isLoading: notificationsLoading, isError: notificationsError } = useQuery({
+    queryKey: ['notifications', id],
+    queryFn: () => notificationsApi.list({ queryId: id!, limit: 100 }).then((r) => r.data),
+    enabled: !!id,
+  });
+
   const extractMutation = useMutation({
     mutationFn: () => queriesApi.extract(id!),
     onSuccess: (res) => {
@@ -176,9 +182,16 @@ export default function QueryDetailPage() {
     }),
     onSuccess: (res) => {
       const n = res.data.notification;
-      toast.success(`Notification sent [${n.submissionStatus}] via ${n.provider}`);
+      if (n.submissionStatus === 'SIMULATED') {
+        toast('Simulated only — no message was delivered.', { icon: '⚠️' });
+      } else if (n.submissionStatus === 'FAILED' || n.submissionStatus === 'NOT_CONFIGURED') {
+        toast.error(`Message ${n.submissionStatus.toLowerCase().replace('_', ' ')}: ${n.errorMessage || n.provider}`);
+      } else {
+        toast.success(`Message ${n.submissionStatus.toLowerCase()} via ${n.provider}`);
+      }
       setShowNotifPanel(false);
       qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['notifications', id] });
     },
     onError: (err: unknown) => {
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
@@ -193,6 +206,22 @@ export default function QueryDetailPage() {
   const missingCount = requirements.filter((r: Requirement) => r.status === 'MISSING').length;
   const matchedCount = requirements.filter((r: Requirement) => r.status === 'MATCHED').length;
   const reviewCount = requirements.filter((r: Requirement) => r.status === 'UNCERTAIN' || r.status === 'NEEDS_REVIEW').length;
+  const notifications = notificationData?.data || [];
+  const channelNotification = (channel: 'WHATSAPP' | 'EMAIL') =>
+    notifications.find((notification: Notification) => notification.channel === channel);
+  const channelIsSuccessful = (channel: 'WHATSAPP' | 'EMAIL') => {
+    const status = channelNotification(channel)?.submissionStatus;
+    return status === 'SIMULATED' || status === 'QUEUED' || status === 'SUBMITTED';
+  };
+  const channelStatusLabel = (channel: 'WHATSAPP' | 'EMAIL') => {
+    const notification = channelNotification(channel);
+    if (notification) {
+      return `${notification.submissionStatus.replace(/_/g, ' ')} · delivery ${notification.deliveryStatus.replace(/_/g, ' ')}`;
+    }
+    if (notificationsLoading) return 'Checking…';
+    return notificationsError ? 'Status unavailable' : 'No attempt';
+  };
+  const hasMissingDelivery = (['WHATSAPP', 'EMAIL'] as const).some((channel) => !channelIsSuccessful(channel));
 
   return (
     <div className="fade-in">
@@ -218,7 +247,7 @@ export default function QueryDetailPage() {
 
           {/* Action buttons */}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {query.extractionStatus === 'PENDING' && (
+            {(query.extractionStatus === 'PENDING' || query.extractionStatus === 'FAILED') && (
               <button
                 id="extract-btn"
                 className="btn btn-navy"
@@ -226,10 +255,10 @@ export default function QueryDetailPage() {
                 disabled={extractMutation.isPending}
               >
                 <Activity size={14} />
-                {extractMutation.isPending ? 'Extracting…' : 'Extract Requirements'}
+                {extractMutation.isPending ? 'Extracting…' : query.extractionStatus === 'FAILED' ? 'Retry Extraction' : 'Extract Requirements'}
               </button>
             )}
-            {query.extractionStatus === 'COMPLETED' && query.matchingStatus === 'PENDING' && (
+            {query.extractionStatus === 'COMPLETED' && (query.matchingStatus === 'PENDING' || query.matchingStatus === 'FAILED') && (
               <button
                 id="match-btn"
                 className="btn btn-primary"
@@ -237,7 +266,7 @@ export default function QueryDetailPage() {
                 disabled={matchMutation.isPending}
               >
                 <CheckCircle size={14} />
-                {matchMutation.isPending ? 'Matching…' : 'Match Documents'}
+                {matchMutation.isPending ? 'Matching…' : query.matchingStatus === 'FAILED' ? 'Retry Matching' : 'Match Documents'}
               </button>
             )}
             {requirements.some((r: Requirement) => r.reviewStatus === 'PENDING') && (
@@ -250,7 +279,7 @@ export default function QueryDetailPage() {
                 <CheckSquare size={14} /> Approve All
               </button>
             )}
-            {query.matchingStatus === 'COMPLETED' && (
+            {query.matchingStatus === 'COMPLETED' && missingCount > 0 && !notificationsLoading && !notificationsError && hasMissingDelivery && (
               <button
                 id="generate-notif-btn"
                 className="btn btn-primary"
@@ -258,7 +287,7 @@ export default function QueryDetailPage() {
                 disabled={generateMutation.isPending}
               >
                 <MessageSquare size={14} />
-                {generateMutation.isPending ? 'Generating…' : 'Generate Notification'}
+                {generateMutation.isPending ? 'Preparing…' : 'Prepare Manual Message'}
               </button>
             )}
           </div>
@@ -315,6 +344,66 @@ export default function QueryDetailPage() {
         <div>
           <div className="card" style={{ marginBottom: 16 }}>
             <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13 }}>
+              Automated Processing & Delivery
+            </div>
+            <div style={{ padding: '12px 14px' }}>
+              <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 10 }}>
+                Query uploads automatically extract requirements, check the patient locker, and attempt WhatsApp and email when documents are missing.
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
+                <span>Extraction</span><strong>{query.extractionStatus.replace(/_/g, ' ')}</strong>
+                <span>Document matching</span><strong>{query.matchingStatus.replace(/_/g, ' ')}</strong>
+                <span>WhatsApp</span><strong>{channelStatusLabel('WHATSAPP').replace(/_/g, ' ')}</strong>
+                <span>Email</span><strong>{channelStatusLabel('EMAIL').replace(/_/g, ' ')}</strong>
+              </div>
+              {notifications.map((notification: Notification) =>
+                notification.errorMessage ? (
+                  <div key={notification._id} className="notice-banner error" style={{ marginTop: 8 }}>
+                    <span>{notification.channel}: {notification.errorMessage}</span>
+                  </div>
+                ) : null
+              )}
+              {notifications.some((notification: Notification) => notification.submissionStatus === 'SIMULATED') && (
+                <div className="notice-banner demo" style={{ marginTop: 8 }}>
+                  <AlertCircle size={12} />
+                  <span>One or more messages were simulated. They were not delivered to the patient.</span>
+                </div>
+              )}
+              {notifications.some((notification: Notification) => notification.submissionStatus === 'SUBMITTED') && (
+                <div className="notice-banner info" style={{ marginTop: 8 }}>
+                  <CheckCircle size={12} />
+                  <span>Submitted to the messaging provider. Submission does not by itself confirm delivery.</span>
+                </div>
+              )}
+              {notificationsError && (
+                <div className="notice-banner error" style={{ marginTop: 8 }}>
+                  <AlertCircle size={12} />
+                  <span>Could not load delivery history. Refresh before attempting a manual follow-up.</span>
+                </div>
+              )}
+              {reviewCount > 0 && (
+                <div className="notice-banner info" style={{ marginTop: 10 }}>
+                  <Clock size={12} />
+                  <span>Some items need staff review. Automatic patient messaging was held for this query.</span>
+                </div>
+              )}
+              {query.matchingStatus === 'COMPLETED' && missingCount === 0 && (
+                <div className="notice-banner info" style={{ marginTop: 10 }}>
+                  <CheckCircle size={12} />
+                  <span>All requested documents were found in the locker; no patient message was needed.</span>
+                </div>
+              )}
+              {query.matchingStatus === 'COMPLETED' && missingCount > 0 && !notificationsLoading && !notificationsError && notifications.length === 0 && reviewCount === 0 && (
+                <div className="notice-banner info" style={{ marginTop: 10 }}>
+                  <AlertCircle size={12} />
+                  <span>No delivery attempt is recorded. Prepare a manual message for follow-up.</span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 16 }}>
+            <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13 }}>
               Original Query Text
             </div>
             <div style={{ padding: '12px 14px', maxHeight: 360, overflowY: 'auto' }}>
@@ -333,7 +422,7 @@ export default function QueryDetailPage() {
               </div>
               <div style={{ padding: '12px 14px' }}>
                 <div className="notice-banner info" style={{ marginBottom: 12 }}>
-                  <span>ℹ️ Review the message before sending. SIMULATED means it was not delivered to the patient.</span>
+                  <span>ℹ️ This is a manual follow-up. The recorded channel status will show whether it was simulated, submitted, or failed.</span>
                 </div>
 
                 <label className="form-label">Channel</label>
@@ -343,6 +432,7 @@ export default function QueryDetailPage() {
                       key={ch}
                       className={`btn btn-sm ${notifChannel === ch ? 'btn-primary' : 'btn-outline'}`}
                       onClick={() => setNotifChannel(ch)}
+                      disabled={channelIsSuccessful(ch)}
                     >
                       {ch}
                     </button>
@@ -371,7 +461,7 @@ export default function QueryDetailPage() {
                     style={{ flex: 1 }}
                   >
                     <Send size={13} />
-                    {sendMutation.isPending ? 'Sending…' : `Send via ${notifChannel} (SIMULATED)`}
+                    {sendMutation.isPending ? 'Sending…' : `Send via ${notifChannel}`}
                   </button>
                 </div>
               </div>
