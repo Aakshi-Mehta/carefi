@@ -1,159 +1,149 @@
-/**
- * Requirement Extraction Tests
- *
- * Tests for the deterministic extraction pipeline.
- * All test inputs are synthetic — no real patient data.
- */
+import axios from 'axios';
+import { _resetConfig } from '../lib/env';
+import { extractRequirements, RequirementExtractionError } from '../services/requirementExtractor';
 
-import { extractRequirements } from '../services/requirementExtractor';
+jest.mock('axios', () => ({
+  __esModule: true,
+  default: {
+    post: jest.fn(),
+    isAxiosError: jest.fn(() => false),
+  },
+}));
 
-describe('Requirement Extraction', () => {
-  // ---- Basic extraction tests ----
-
-  test('extracts a single requirement from numbered list', () => {
-    const text = `Please provide the following:
-1. Final discharge summary`;
-    const results = extractRequirements(text);
-    expect(results.length).toBeGreaterThanOrEqual(1);
-    const found = results.find((r) => r.normalizedCategory === 'DISCHARGE_SUMMARY');
-    expect(found).toBeDefined();
-    expect(found!.confidence).toBeGreaterThan(0.5);
-  });
-
-  test('extracts multiple requirements from numbered list', () => {
-    const text = `To proceed with the claim, please provide:
+const sourceText = `Please provide the following:
 1. Treating doctor's prescription
-2. Investigation reports
-3. Final discharge summary
-4. Detailed hospital bill`;
-    const results = extractRequirements(text);
-    expect(results.length).toBeGreaterThanOrEqual(4);
-    const categories = results.map((r) => r.normalizedCategory);
-    expect(categories).toContain('PRESCRIPTION');
-    expect(categories).toContain('INVESTIGATION_REPORT');
-    expect(categories).toContain('DISCHARGE_SUMMARY');
-    expect(categories).toContain('HOSPITAL_BILL');
+2. Investigation reports`;
+const originalGroqApiKey = process.env.GROQ_API_KEY;
+const originalGroqModel = process.env.GROQ_MODEL;
+
+function mockGroqRequirements(requirements: unknown[]) {
+  (axios.post as jest.Mock).mockResolvedValue({
+    data: {
+      choices: [{ message: { content: JSON.stringify({ requirements }) } }],
+    },
+  });
+}
+
+describe('Groq requirement extraction', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    process.env.GROQ_API_KEY = 'test-groq-key';
+    _resetConfig();
   });
 
-  test('extracts requirements from bullet points', () => {
-    const text = `We require the following documents:
-• Laboratory reports
-• Pharmacy bills
-• Health insurance card`;
-    const results = extractRequirements(text);
-    const categories = results.map((r) => r.normalizedCategory);
-    expect(categories).toContain('LAB_REPORT');
-    expect(categories).toContain('PHARMACY_BILL');
-    expect(categories).toContain('HEALTH_INSURANCE_CARD');
+  afterAll(() => {
+    if (originalGroqApiKey === undefined) delete process.env.GROQ_API_KEY;
+    else process.env.GROQ_API_KEY = originalGroqApiKey;
+    if (originalGroqModel === undefined) delete process.env.GROQ_MODEL;
+    else process.env.GROQ_MODEL = originalGroqModel;
+    _resetConfig();
   });
 
-  test('handles different wording for same requirement', () => {
-    const text1 = `Please submit: 1. Treating physician prescription`;
-    const text2 = `Kindly provide: 1. Doctor's Rx`;
-    const text3 = `Required: 1. Medical prescription from treating doctor`;
+  test('extracts multiple explicitly requested documents with source evidence', async () => {
+    mockGroqRequirements([
+      {
+        originalText: "Treating doctor's prescription",
+        normalizedCategory: 'PRESCRIPTION',
+        evidence: "1. Treating doctor's prescription",
+        confidence: 0.96,
+      },
+      {
+        originalText: 'Investigation reports',
+        normalizedCategory: 'INVESTIGATION_REPORT',
+        evidence: '2. Investigation reports',
+        confidence: 0.92,
+      },
+    ]);
 
-    const r1 = extractRequirements(text1);
-    const r2 = extractRequirements(text2);
-    const r3 = extractRequirements(text3);
+    const results = await extractRequirements(sourceText);
 
-    expect(r1.some((r) => r.normalizedCategory === 'PRESCRIPTION')).toBe(true);
-    expect(r3.some((r) => r.normalizedCategory === 'PRESCRIPTION')).toBe(true);
-  });
-
-  test('handles lettered list (a. b. c.)', () => {
-    const text = `Please provide:
-a. Laboratory reports
-b. Discharge summary
-c. Hospital bill`;
-    const results = extractRequirements(text);
-    expect(results.length).toBeGreaterThanOrEqual(3);
-  });
-
-  test('marks uncertain extractions correctly', () => {
-    const text = `Please submit the relevant documentation as per policy terms.`;
-    const results = extractRequirements(text);
-    // Either no results or all marked uncertain
-    if (results.length > 0) {
-      expect(results.every((r) => r.isUncertain || r.confidence <= 0.5)).toBe(true);
-    }
-  });
-
-  test('returns empty array for empty input', () => {
-    expect(extractRequirements('')).toEqual([]);
-    expect(extractRequirements('   ')).toEqual([]);
-  });
-
-  test('handles query with no document list gracefully', () => {
-    const text = `Thank you for submitting your insurance claim. We are processing it.`;
-    const results = extractRequirements(text);
-    // Should return empty or only low-confidence results
-    if (results.length > 0) {
-      results.forEach((r) => {
-        expect(r.confidence).toBeLessThan(0.7);
-      });
-    }
-  });
-
-  test('every extracted requirement has evidence from source text', () => {
-    const text = `Please provide:
-1. Treating doctor's prescription
-2. MRI scan report`;
-    const results = extractRequirements(text);
-    results.forEach((r) => {
-      expect(r.evidence).toBeTruthy();
-      expect(r.evidence.length).toBeGreaterThan(0);
-      // Evidence must contain words from original text
-      expect(r.originalText.length).toBeGreaterThan(0);
-    });
-  });
-
-  test('handles unseen query format with dash-separated list', () => {
-    const text = `For assessment of the hospitalization claim, submit:
-- Admission record from the hospital
-- Government ID of the patient`;
-    const results = extractRequirements(text);
-    const categories = results.map((r) => r.normalizedCategory);
-    expect(categories).toContain('ADMISSION_RECORD');
-    expect(categories).toContain('GOVERNMENT_ID');
-  });
-
-  test('does not invent requirements not in source text', () => {
-    const text = `Please provide the discharge summary.`;
-    const results = extractRequirements(text);
-    // Should only find DISCHARGE_SUMMARY, not prescription or bills
-    const hasInvented = results.some(
-      (r) => r.normalizedCategory === 'PRESCRIPTION' && r.confidence > 0.5
+    expect(results).toHaveLength(2);
+    expect(results.map((result) => result.normalizedCategory)).toEqual([
+      'PRESCRIPTION',
+      'INVESTIGATION_REPORT',
+    ]);
+    expect(results.every((result) => !result.isUncertain)).toBe(true);
+    expect(results[0].requirementId).toMatch(/^REQ-[A-F0-9]{8}$/);
+    expect(axios.post).toHaveBeenCalledWith(
+      'https://api.groq.com/openai/v1/chat/completions',
+      expect.objectContaining({
+        model: expect.any(String),
+        response_format: { type: 'json_object' },
+      }),
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer test-groq-key' },
+        timeout: 30_000,
+      })
     );
-    expect(hasInvented).toBe(false);
   });
 
-  test('handles ambiguous requirement as UNCERTAIN', () => {
-    const text = `Please provide additional supporting documentation.`;
-    const results = extractRequirements(text);
-    if (results.length > 0) {
-      expect(results.some((r) => r.isUncertain || r.confidence < 0.5)).toBe(true);
-    }
+  test('returns no requirements for empty text without calling the LLM', async () => {
+    await expect(extractRequirements('  ')).resolves.toEqual([]);
+    expect(axios.post).not.toHaveBeenCalled();
   });
 
-  // ---- Demo fixture test ----
-  test('correctly extracts from demo query fixture QRY-DEMO001', () => {
-    const text = `DEMO SYNTHETIC QUERY — NOT A REAL INSURER LETTER
+  test('marks low-confidence and unknown categories for human review', async () => {
+    mockGroqRequirements([
+      {
+        originalText: 'Treating doctor',
+        normalizedCategory: 'UNSUPPORTED_CATEGORY',
+        evidence: "1. Treating doctor's prescription",
+        confidence: 0.4,
+      },
+    ]);
 
-Dear Hospital Administration,
+    const [result] = await extractRequirements(sourceText);
+    expect(result.normalizedCategory).toBe('OTHER');
+    expect(result.isUncertain).toBe(true);
+  });
 
-With reference to claim CLM-5001 for patient Aarav Sharma, we have reviewed the submitted documents.
+  test('rejects requirements or evidence that are not in the source letter', async () => {
+    mockGroqRequirements([
+      {
+        originalText: 'An invented hospital bill',
+        normalizedCategory: 'HOSPITAL_BILL',
+        evidence: 'The insurer requests a hospital bill.',
+        confidence: 0.99,
+      },
+    ]);
 
-To proceed with the claim assessment, please provide the following:
+    await expect(extractRequirements(sourceText)).rejects.toThrow(
+      'without matching source evidence'
+    );
+  });
 
-1. Treating doctor's prescription
-2. Investigation reports
+  test('rejects invalid model output instead of silently falling back', async () => {
+    (axios.post as jest.Mock).mockResolvedValue({
+      data: { choices: [{ message: { content: 'not json' } }] },
+    });
 
-Kindly submit the above documents within 7 working days.`;
+    await expect(extractRequirements(sourceText)).rejects.toThrow(
+      'invalid JSON'
+    );
+  });
 
-    const results = extractRequirements(text);
-    expect(results.length).toBeGreaterThanOrEqual(2);
-    const categories = results.map((r) => r.normalizedCategory);
-    expect(categories).toContain('PRESCRIPTION');
-    expect(categories).toContain('INVESTIGATION_REPORT');
+  test('does not send oversized query text to Groq', async () => {
+    await expect(extractRequirements('x'.repeat(30_001))).rejects.toThrow(
+      'too long for AI extraction'
+    );
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  test('reports provider failures without falling back to heuristic extraction', async () => {
+    (axios.post as jest.Mock).mockRejectedValue(new Error('provider unavailable'));
+
+    await expect(extractRequirements(sourceText)).rejects.toThrow(
+      'Could not reach Groq'
+    );
+  });
+
+  test('reports missing Groq configuration explicitly', async () => {
+    delete process.env.GROQ_API_KEY;
+    _resetConfig();
+
+    await expect(extractRequirements(sourceText)).rejects.toBeInstanceOf(
+      RequirementExtractionError
+    );
+    expect(axios.post).not.toHaveBeenCalled();
   });
 });

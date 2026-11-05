@@ -37,6 +37,8 @@ interface EnvConfig {
   EMAIL_USER?: string;
   EMAIL_PASS?: string;
   EMAIL_FROM: string;
+  GROQ_API_KEY?: string;
+  GROQ_MODEL: string;
 }
 
 function requireEnv(name: string): string {
@@ -124,6 +126,8 @@ export function getConfig(): EnvConfig {
     EMAIL_USER: optionalEnv('EMAIL_USER'),
     EMAIL_PASS: optionalEnv('EMAIL_PASS'),
     EMAIL_FROM: process.env.EMAIL_FROM || 'noreply@revnow.local',
+    GROQ_API_KEY: optionalEnv('GROQ_API_KEY'),
+    GROQ_MODEL: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
   };
 
   return _config;

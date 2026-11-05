@@ -27,7 +27,7 @@ export async function automateQueryResponse(queryId: string, actor: string): Pro
     if (!query) throw new Error('Query not found after upload');
 
     await QueryModel.findOneAndUpdate({ queryId }, { extractionStatus: 'PROCESSING' });
-    const extracted = extractRequirements(query.originalText);
+    const extracted = await extractRequirements(query.originalText);
     requirementCount = extracted.length;
 
     if (extracted.length === 0) {
@@ -51,7 +51,7 @@ export async function automateQueryResponse(queryId: string, actor: string): Pro
       sourcePage: item.sourcePage,
       confidence: item.confidence,
       status: item.isUncertain ? 'UNCERTAIN' : 'PENDING',
-      reviewStatus: item.isUncertain ? 'PENDING' : 'APPROVED',
+      reviewStatus: 'PENDING',
     })));
 
     await QueryModel.findOneAndUpdate({ queryId }, { extractionStatus: 'COMPLETED' });

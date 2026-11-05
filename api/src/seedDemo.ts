@@ -269,15 +269,18 @@ Note: All documents must be originals or certified copies.`,
     },
   ];
 
-  await Requirement.insertMany(requirements);
+  const savedRequirements = await Requirement.insertMany(requirements);
 
   // ---- Matches for QRY-DEMO001 ----
-  const matchId1 = uuidv4();
-  const matchId2 = uuidv4();
+  const prescriptionRequirement = savedRequirements.find((item) => item.requirementId === 'REQ-DEMO001');
+  const investigationRequirement = savedRequirements.find((item) => item.requirementId === 'REQ-DEMO002');
+  if (!prescriptionRequirement || !investigationRequirement) {
+    throw new Error('Failed to seed demo query requirements');
+  }
 
   await Match.insertMany([
     {
-      requirementId: 'REQ-DEMO001',
+      requirementId: String(prescriptionRequirement._id),
       documentId: undefined,
       matchReason: 'No document found in category: PRESCRIPTION. Searched 3 document(s) for patient PAT-1001. None matched category "PRESCRIPTION" or compatible categories.',
       evidence: 'Patient has 3 documents: DISCHARGE_SUMMARY, HEALTH_INSURANCE_CARD, HOSPITAL_BILL. None are in PRESCRIPTION category.',
@@ -285,7 +288,7 @@ Note: All documents must be originals or certified copies.`,
       status: 'MISSING',
     },
     {
-      requirementId: 'REQ-DEMO002',
+      requirementId: String(investigationRequirement._id),
       documentId: undefined,
       matchReason: 'No document found in category: INVESTIGATION_REPORT. Searched 3 document(s) for patient PAT-1001. None matched category "INVESTIGATION_REPORT" or compatible categories.',
       evidence: 'Patient has 3 documents: DISCHARGE_SUMMARY, HEALTH_INSURANCE_CARD, HOSPITAL_BILL. None are in INVESTIGATION_REPORT, DIAGNOSTIC_REPORT, or LAB_REPORT category.',

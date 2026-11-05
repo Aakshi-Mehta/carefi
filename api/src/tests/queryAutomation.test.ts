@@ -35,7 +35,7 @@ describe('Automatic query response', () => {
     queryModelMock.findOneAndUpdate.mockResolvedValue(null);
     requirementModelMock.insertMany.mockResolvedValue([{
       _id: 'REQ-MONGO-1',
-      reviewStatus: 'APPROVED',
+      reviewStatus: 'PENDING',
     }]);
     requirementModelMock.findByIdAndUpdate.mockResolvedValue(null);
     matchModelMock.findOneAndUpdate.mockResolvedValue(null);
@@ -47,7 +47,7 @@ describe('Automatic query response', () => {
       email: 'demo@example.invalid',
     });
     (writeAudit as jest.Mock).mockResolvedValue(undefined);
-    (extractRequirements as jest.Mock).mockReturnValue([{
+    (extractRequirements as jest.Mock).mockResolvedValue([{
       requirementId: 'REQ-1',
       originalText: 'Treating doctor prescription',
       normalizedCategory: 'PRESCRIPTION',
@@ -71,10 +71,13 @@ describe('Automatic query response', () => {
     expect(result.missingCount).toBe(1);
     expect(result.channels).toEqual([]);
     expect(result.detail).toContain('Prepare and review a patient message before sending');
+    expect(requirementModelMock.insertMany).toHaveBeenCalledWith([
+      expect.objectContaining({ reviewStatus: 'PENDING' }),
+    ]);
   });
 
   test('does not contact the patient when extraction is uncertain', async () => {
-    (extractRequirements as jest.Mock).mockReturnValue([{
+    (extractRequirements as jest.Mock).mockResolvedValue([{
       requirementId: 'REQ-1',
       originalText: 'Additional supporting documentation',
       normalizedCategory: 'OTHER',

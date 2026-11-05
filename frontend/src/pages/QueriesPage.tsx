@@ -88,7 +88,7 @@ function UploadQueryModal({
         </div>
         <div className="modal-body">
           <div className="notice-banner demo" style={{ marginBottom: 16 }}>
-            ⚠️ Upload fictional query letters only. Do not include real patient information.
+            ⚠️ Groq AI processes the query text for extraction. Use fictional data only; do not upload real patient information.
           </div>
 
           <div

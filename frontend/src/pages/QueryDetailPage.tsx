@@ -238,7 +238,7 @@ export default function QueryDetailPage() {
               <span className="badge badge-navy">Patient: {query.patientId}</span>
               <span className="badge badge-navy">Claim: {query.claimId}</span>
               <span className={`badge ${query.extractionStatus === 'COMPLETED' ? 'badge-success' : 'badge-warning'}`}>
-                Extraction: {query.extractionStatus}
+                Groq AI extraction: {query.extractionStatus}
               </span>
               <span className={`badge ${query.matchingStatus === 'COMPLETED' ? 'badge-success' : 'badge-gray'}`}>
                 Matching: {query.matchingStatus}
@@ -336,7 +336,9 @@ export default function QueryDetailPage() {
               <RequirementCard
                 key={req._id}
                 req={req}
-                match={matches.find((item) => item.requirementId === String(req._id))}
+                match={matches.find((item) =>
+                  item.requirementId === String(req._id) || item.requirementId === req.requirementId
+                )}
               />
             ))
           )}
@@ -353,7 +355,7 @@ export default function QueryDetailPage() {
                 Uploading a query extracts its document requirements and checks the patient locker. Review the generated message before sending it.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
-                <span>Extraction</span><strong>{query.extractionStatus.replace(/_/g, ' ')}</strong>
+                <span>Groq AI extraction</span><strong>{query.extractionStatus.replace(/_/g, ' ')}</strong>
                 <span>Document matching</span><strong>{query.matchingStatus.replace(/_/g, ' ')}</strong>
                 <span>WhatsApp</span><strong>{channelStatusLabel('WHATSAPP').replace(/_/g, ' ')}</strong>
                 <span>Email</span><strong>{channelStatusLabel('EMAIL').replace(/_/g, ' ')}</strong>

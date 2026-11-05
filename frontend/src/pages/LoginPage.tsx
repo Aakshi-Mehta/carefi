@@ -63,7 +63,7 @@ export default function LoginPage() {
             <span>⚠️</span>
             <span>
               <strong>Sandbox environment.</strong> Pre-filled with test credentials.
-              Use fictional patient data only.
+              Groq AI processes query text. Use fictional patient data only.
             </span>
           </div>
 

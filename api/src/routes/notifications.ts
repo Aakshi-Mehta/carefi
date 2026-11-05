@@ -27,10 +27,14 @@ router.post('/generate', requireStaff, async (req: AuthRequest, res: Response) =
     }
 
     const requirements = await Requirement.find({ queryId });
+    const requirementMatchKeys = requirements.flatMap((requirement) => [
+      String(requirement._id),
+      requirement.requirementId,
+    ]);
     const [patient, claim, matchResults] = await Promise.all([
       Patient.findOne({ patientId: query.patientId }),
       Claim.findOne({ claimId: query.claimId }),
-      Match.find({ requirementId: { $in: requirements.map((r) => String(r._id)) } }),
+      Match.find({ requirementId: { $in: requirementMatchKeys } }),
     ]);
 
     if (!patient) { res.status(404).json({ error: 'Patient not found' }); return; }
@@ -52,7 +56,12 @@ router.post('/generate', requireStaff, async (req: AuthRequest, res: Response) =
       supportEmail: cfg.EMAIL_FROM !== 'noreply@revnow.local' ? cfg.EMAIL_FROM : undefined,
       requirements: requirements,
       matchResults: matchResults.map((m) => ({
-        requirementId: m.requirementId,
+        requirementId: String(
+          requirements.find((requirement) =>
+            String(requirement._id) === m.requirementId
+            || requirement.requirementId === m.requirementId
+          )?._id ?? m.requirementId
+        ),
         documentId: m.documentId,
         matchReason: m.matchReason,
         evidence: m.evidence,
@@ -102,7 +111,11 @@ router.post('/send', requireStaff, async (req: AuthRequest, res: Response) => {
     }
 
     const requirements = await Requirement.find({ queryId });
-    const matches = await Match.find({ requirementId: { $in: requirements.map((r) => String(r._id)) } });
+    const requirementMatchKeys = requirements.flatMap((requirement) => [
+      String(requirement._id),
+      requirement.requirementId,
+    ]);
+    const matches = await Match.find({ requirementId: { $in: requirementMatchKeys } });
     if (requirements.some((requirement) =>
       requirement.reviewStatus !== 'APPROVED'
       || !['MATCHED', 'MISSING'].includes(requirement.status)

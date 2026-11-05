@@ -185,7 +185,8 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
       Requirement.find({ queryId: req.params.id }).lean(),
     ]);
     if (!query) { res.status(404).json({ error: 'Query not found' }); return; }
-    const matches = await Match.find({ requirementId: { $in: requirements.map((item) => String(item._id)) } }).lean();
+    const requirementMatchKeys = requirements.flatMap((item) => [String(item._id), item.requirementId]);
+    const matches = await Match.find({ requirementId: { $in: requirementMatchKeys } }).lean();
     res.json({ query, requirements, matches });
   } catch {
     res.status(500).json({ error: 'Failed to fetch query' });
@@ -207,7 +208,7 @@ router.post('/:id/extract', requireStaff, async (req: AuthRequest, res: Response
     await QueryModel.findOneAndUpdate({ queryId: req.params.id }, { extractionStatus: 'PROCESSING' });
 
     try {
-      const extracted = extractRequirements(query.originalText);
+      const extracted = await extractRequirements(query.originalText);
 
       if (extracted.length === 0) {
         await QueryModel.findOneAndUpdate(
@@ -230,7 +231,7 @@ router.post('/:id/extract', requireStaff, async (req: AuthRequest, res: Response
             sourcePage: r.sourcePage,
             confidence: r.confidence,
             status: r.isUncertain ? 'UNCERTAIN' : 'PENDING',
-            reviewStatus: r.isUncertain ? 'PENDING' : 'APPROVED',
+            reviewStatus: 'PENDING',
           })
         )
       );

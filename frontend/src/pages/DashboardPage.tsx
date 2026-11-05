@@ -108,7 +108,7 @@ export default function DashboardPage() {
         <div className="card" style={{ padding: '18px 20px', marginBottom: 24 }}>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Start here</div>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
-            Upload an insurer query to extract document requests and compare them with the patient locker.
+            Groq AI extracts requested documents from an insurer query and compares them with the patient locker.
             Review the generated follow-up message before sending it to the patient.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
