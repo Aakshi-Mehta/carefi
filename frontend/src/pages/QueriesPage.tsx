@@ -59,22 +59,11 @@ function UploadQueryModal({
     },
     onSuccess: (res) => {
       const { automation } = res.data;
-      const channelSummary = automation.channels
-        .map(({ channel, status }) => `${channel}: ${status}`)
-        .join(', ');
-      const resultMessage = channelSummary || automation.detail || automation.status;
-      const deliveryFailed = automation.channels.some(({ status }) =>
-        status === 'FAILED' || status === 'NOT_CONFIGURED'
-      );
-      const deliverySimulated = automation.channels.some(({ status }) => status === 'SIMULATED');
+      const resultMessage = automation.detail || automation.status;
       if (automation.status === 'FAILED') {
         toast.error(`Query saved, but automatic processing failed: ${resultMessage}`);
       } else if (automation.status === 'NEEDS_REVIEW') {
         toast(`Query saved and needs review: ${resultMessage}`, { icon: '⚠️' });
-      } else if (deliveryFailed) {
-        toast.error(`Query processed, but one or more channels need attention: ${resultMessage}`);
-      } else if (deliverySimulated) {
-        toast(`Query processed. Messages were simulated and not delivered: ${resultMessage}`, { icon: '⚠️' });
       } else {
         toast.success(`Query ${res.data.query.queryId} processed: ${resultMessage}`);
       }

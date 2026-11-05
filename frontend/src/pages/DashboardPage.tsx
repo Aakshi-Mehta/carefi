@@ -108,15 +108,15 @@ export default function DashboardPage() {
         <div className="card" style={{ padding: '18px 20px', marginBottom: 24 }}>
           <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 6 }}>Start here</div>
           <p style={{ color: 'var(--text-secondary)', fontSize: 13, marginBottom: 16 }}>
-            Follow these steps to process an insurer query. Uploading a query automatically extracts requests,
-            checks the patient locker, and attempts both configured message channels.
+            Upload an insurer query to extract document requests and compare them with the patient locker.
+            Review the generated follow-up message before sending it to the patient.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 12 }}>
             {[
               { step: '1', title: 'Create or find a patient', detail: 'Open the patient profile.', to: '/patients' },
               { step: '2', title: 'Add a claim and documents', detail: 'Link existing records to the patient and claim.', to: '/claims' },
               { step: '3', title: 'Upload the insurer query', detail: 'Start from the patient’s claim or query list.', to: '/queries' },
-              { step: '4', title: 'Review the outcome', detail: 'Check extracted items, matches, and channel status.', to: '/queries' },
+              { step: '4', title: 'Review and follow up', detail: 'Check missing documents, then review and send a patient message.', to: '/queries' },
             ].map(({ step, title, detail, to }) => (
               <Link key={step} to={to} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12, border: '1px solid var(--border)', borderRadius: 8, height: '100%' }}>

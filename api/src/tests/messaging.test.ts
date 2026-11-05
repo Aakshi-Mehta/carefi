@@ -139,6 +139,7 @@ describe('Notification Generator', () => {
     expect(result.message).toContain('Investigation reports');
     expect(result.message).toContain('asked for these specific documents');
     expect(result.message).toContain('Demo Hospital');
+    expect(result.message).not.toContain('All required documents have been received');
   });
 
   test('does NOT list matched documents as missing', () => {

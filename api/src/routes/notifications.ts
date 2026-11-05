@@ -26,17 +26,25 @@ router.post('/generate', requireStaff, async (req: AuthRequest, res: Response) =
       return;
     }
 
-    const [patient, requirements, matchResults] = await Promise.all([
+    const requirements = await Requirement.find({ queryId });
+    const [patient, claim, matchResults] = await Promise.all([
       Patient.findOne({ patientId: query.patientId }),
-      Requirement.find({ queryId }),
-      Match.find({ requirementId: { $in: (await Requirement.find({ queryId })).map((r) => String(r._id)) } }),
+      Claim.findOne({ claimId: query.claimId }),
+      Match.find({ requirementId: { $in: requirements.map((r) => String(r._id)) } }),
     ]);
 
     if (!patient) { res.status(404).json({ error: 'Patient not found' }); return; }
+    if (requirements.some((requirement) =>
+      requirement.reviewStatus !== 'APPROVED'
+      || !['MATCHED', 'MISSING'].includes(requirement.status)
+      || !matchResults.some((match) => match.requirementId === String(requirement._id))
+    ) || matchResults.some((match) => !['MATCHED', 'MISSING'].includes(match.status))) {
+      res.status(422).json({ error: 'Requirements and document matches must be reviewed before preparing a patient message' });
+      return;
+    }
 
     // Get hospital settings from env/config (in production, store in Settings collection)
     const cfg = getConfig();
-    const claim = await Claim.findOne({ claimId: query.claimId });
 
     const notification = generateNotification({
       patientName: patient.name,
@@ -87,6 +95,26 @@ router.post('/send', requireStaff, async (req: AuthRequest, res: Response) => {
 
     const query = await QueryModel.findOne({ queryId });
     if (!query) { res.status(404).json({ error: 'Query not found' }); return; }
+
+    if (query.matchingStatus !== 'COMPLETED') {
+      res.status(422).json({ error: 'Document matching must be completed before sending a patient message' });
+      return;
+    }
+
+    const requirements = await Requirement.find({ queryId });
+    const matches = await Match.find({ requirementId: { $in: requirements.map((r) => String(r._id)) } });
+    if (requirements.some((requirement) =>
+      requirement.reviewStatus !== 'APPROVED'
+      || !['MATCHED', 'MISSING'].includes(requirement.status)
+      || !matches.some((match) => match.requirementId === String(requirement._id))
+    ) || matches.some((match) => !['MATCHED', 'MISSING'].includes(match.status))) {
+      res.status(422).json({ error: 'Requirements and document matches must be reviewed before sending a patient message' });
+      return;
+    }
+    if (!matches.some((match) => match.status === 'MISSING')) {
+      res.status(422).json({ error: 'There are no confirmed missing documents to request for this query' });
+      return;
+    }
 
     const patient = await Patient.findOne({ patientId: query.patientId });
     if (!patient) { res.status(404).json({ error: 'Patient not found' }); return; }

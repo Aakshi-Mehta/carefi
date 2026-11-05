@@ -3,12 +3,9 @@ import Requirement from '../models/Requirement';
 import Match from '../models/Match';
 import DocumentModel from '../models/Document';
 import Patient from '../models/Patient';
-import Claim from '../models/Claim';
 import { writeAudit } from '../lib/audit';
 import { extractRequirements } from './requirementExtractor';
 import { matchRequirements } from './documentMatcher';
-import { generateNotification } from './notificationGenerator';
-import { deliverNotificationChannel } from './notificationDelivery';
 
 export interface QueryAutomationOutcome {
   status: 'COMPLETED' | 'NEEDS_REVIEW' | 'FAILED';
@@ -71,10 +68,9 @@ export async function automateQueryResponse(queryId: string, actor: string): Pro
 
     stage = 'matching';
     await QueryModel.findOneAndUpdate({ queryId }, { matchingStatus: 'PROCESSING' });
-    const [documents, patient, claim] = await Promise.all([
+    const [documents, patient] = await Promise.all([
       DocumentModel.find({ patientId: query.patientId }),
       Patient.findOne({ patientId: query.patientId }),
-      Claim.findOne({ claimId: query.claimId }),
     ]);
 
     if (!patient) throw new Error('Patient not found while processing query');
@@ -122,7 +118,7 @@ export async function automateQueryResponse(queryId: string, actor: string): Pro
         matchedCount,
         missingCount,
         channels: [],
-        detail: 'At least one requirement or document match is uncertain; messages were not sent.',
+        detail: 'At least one requirement or document match is uncertain; review it before preparing a patient message.',
       };
     }
 
@@ -137,46 +133,14 @@ export async function automateQueryResponse(queryId: string, actor: string): Pro
       };
     }
 
-    const message = generateNotification({
-      patientName: patient.name,
-      hospitalName: claim?.hospital || 'Care Team',
-      requirements,
-      matchResults: results,
-    }).message;
-
-    const deliveries = await Promise.allSettled([
-      deliverNotificationChannel({
-        queryId,
-        claimId: query.claimId,
-        patient,
-        actor,
-        channel: 'WHATSAPP',
-        messageText: message,
-      }),
-      deliverNotificationChannel({
-        queryId,
-        claimId: query.claimId,
-        patient,
-        actor,
-        channel: 'EMAIL',
-        messageText: message,
-      }),
-    ]);
-
-    const channels = deliveries.map((delivery, index) => {
-      const channel: 'WHATSAPP' | 'EMAIL' = index === 0 ? 'WHATSAPP' : 'EMAIL';
-      if (delivery.status === 'fulfilled') {
-        return {
-          channel,
-          status: delivery.value.sendResult.status,
-          errorMessage: delivery.value.sendResult.errorMessage,
-        };
-      }
-      console.error(`[QueryAutomation] ${channel} delivery failed for ${queryId}:`, delivery.reason);
-      return { channel, status: 'FAILED', errorMessage: 'Delivery failed; see server logs.' };
-    });
-
-    return { status: 'COMPLETED', requirementCount, matchedCount, missingCount, channels };
+    return {
+      status: 'COMPLETED',
+      requirementCount,
+      matchedCount,
+      missingCount,
+      channels: [],
+      detail: 'Missing documents identified. Prepare and review a patient message before sending.',
+    };
   } catch (error) {
     const statusUpdate = stage === 'extraction'
       ? { extractionStatus: 'FAILED' }

@@ -205,7 +205,9 @@ export default function QueryDetailPage() {
   const { query, requirements, matches } = data;
   const missingCount = requirements.filter((r: Requirement) => r.status === 'MISSING').length;
   const matchedCount = requirements.filter((r: Requirement) => r.status === 'MATCHED').length;
-  const reviewCount = requirements.filter((r: Requirement) => r.status === 'UNCERTAIN' || r.status === 'NEEDS_REVIEW').length;
+  const reviewCount = requirements.filter((r: Requirement) =>
+    r.reviewStatus !== 'APPROVED' || r.status === 'UNCERTAIN' || r.status === 'NEEDS_REVIEW'
+  ).length;
   const notifications = notificationData?.data || [];
   const channelNotification = (channel: 'WHATSAPP' | 'EMAIL') =>
     notifications.find((notification: Notification) => notification.channel === channel);
@@ -279,7 +281,7 @@ export default function QueryDetailPage() {
                 <CheckSquare size={14} /> Approve All
               </button>
             )}
-            {query.matchingStatus === 'COMPLETED' && missingCount > 0 && !notificationsLoading && !notificationsError && hasMissingDelivery && (
+            {query.matchingStatus === 'COMPLETED' && missingCount > 0 && reviewCount === 0 && !notificationsLoading && !notificationsError && hasMissingDelivery && (
               <button
                 id="generate-notif-btn"
                 className="btn btn-primary"
@@ -287,7 +289,7 @@ export default function QueryDetailPage() {
                 disabled={generateMutation.isPending}
               >
                 <MessageSquare size={14} />
-                {generateMutation.isPending ? 'Preparing…' : 'Prepare Manual Message'}
+                {generateMutation.isPending ? 'Preparing…' : 'Prepare Patient Message'}
               </button>
             )}
           </div>
@@ -344,11 +346,11 @@ export default function QueryDetailPage() {
         <div>
           <div className="card" style={{ marginBottom: 16 }}>
             <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13 }}>
-              Automated Processing & Delivery
+              Query Analysis & Patient Follow-up
             </div>
             <div style={{ padding: '12px 14px' }}>
               <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 10 }}>
-                Query uploads automatically extract requirements, check the patient locker, and attempt WhatsApp and email when documents are missing.
+                Uploading a query extracts its document requirements and checks the patient locker. Review the generated message before sending it.
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 12 }}>
                 <span>Extraction</span><strong>{query.extractionStatus.replace(/_/g, ' ')}</strong>
@@ -384,7 +386,7 @@ export default function QueryDetailPage() {
               {reviewCount > 0 && (
                 <div className="notice-banner info" style={{ marginTop: 10 }}>
                   <Clock size={12} />
-                  <span>Some items need staff review. Automatic patient messaging was held for this query.</span>
+                  <span>Some items need staff review. Approve or resolve them before preparing a patient message.</span>
                 </div>
               )}
               {query.matchingStatus === 'COMPLETED' && missingCount === 0 && (
@@ -396,7 +398,7 @@ export default function QueryDetailPage() {
               {query.matchingStatus === 'COMPLETED' && missingCount > 0 && !notificationsLoading && !notificationsError && notifications.length === 0 && reviewCount === 0 && (
                 <div className="notice-banner info" style={{ marginTop: 10 }}>
                   <AlertCircle size={12} />
-                  <span>No delivery attempt is recorded. Prepare a manual message for follow-up.</span>
+                  <span>No delivery attempt is recorded. Prepare a message draft to request the missing documents.</span>
                 </div>
               )}
             </div>
@@ -418,11 +420,11 @@ export default function QueryDetailPage() {
             <div className="card">
               <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <MessageSquare size={14} color="var(--primary-teal)" />
-                Patient Notification
+                Patient Message Draft
               </div>
               <div style={{ padding: '12px 14px' }}>
                 <div className="notice-banner info" style={{ marginBottom: 12 }}>
-                  <span>ℹ️ This is a manual follow-up. The recorded channel status will show whether it was simulated, submitted, or failed.</span>
+                  <span>Review the requested documents and message, then choose a channel to send it. Sandbox messages may be simulated.</span>
                 </div>
 
                 <label className="form-label">Channel</label>
