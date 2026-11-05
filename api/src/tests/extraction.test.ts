@@ -146,4 +146,51 @@ describe('Groq requirement extraction', () => {
     );
     expect(axios.post).not.toHaveBeenCalled();
   });
+
+  test('uses the currently supported Groq model when no model is configured', async () => {
+    const originalModel = process.env.GROQ_MODEL;
+    delete process.env.GROQ_MODEL;
+    _resetConfig();
+    mockGroqRequirements([]);
+
+    await extractRequirements(sourceText);
+
+    expect(axios.post).toHaveBeenCalledWith(
+      'https://api.groq.com/openai/v1/chat/completions',
+      expect.objectContaining({ model: 'openai/gpt-oss-120b' }),
+      expect.any(Object)
+    );
+    if (originalModel === undefined) delete process.env.GROQ_MODEL;
+    else process.env.GROQ_MODEL = originalModel;
+    _resetConfig();
+  });
+
+  test('replaces the retired default model even when it is explicitly configured', async () => {
+    const originalModel = process.env.GROQ_MODEL;
+    process.env.GROQ_MODEL = 'llama-3.3-70b-versatile';
+    _resetConfig();
+    mockGroqRequirements([]);
+
+    await extractRequirements(sourceText);
+
+    expect(axios.post).toHaveBeenCalledWith(
+      'https://api.groq.com/openai/v1/chat/completions',
+      expect.objectContaining({ model: 'openai/gpt-oss-120b' }),
+      expect.any(Object)
+    );
+    if (originalModel === undefined) delete process.env.GROQ_MODEL;
+    else process.env.GROQ_MODEL = originalModel;
+    _resetConfig();
+  });
+
+  test('reports a retired or unknown model as an actionable provider error', async () => {
+    (axios.post as jest.Mock).mockRejectedValue({
+      response: { status: 400 },
+    });
+    jest.spyOn(axios, 'isAxiosError').mockReturnValue(true);
+
+    await expect(extractRequirements(sourceText)).rejects.toThrow(
+      'Check that GROQ_MODEL is set to an active model'
+    );
+  });
 });

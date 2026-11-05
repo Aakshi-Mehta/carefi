@@ -48,7 +48,7 @@ export interface ExtractedRequirement {
 }
 
 export class RequirementExtractionError extends Error {
-  constructor(message: string) {
+  constructor(message: string, readonly statusCode = 502) {
     super(message);
     this.name = 'RequirementExtractionError';
   }
@@ -65,7 +65,10 @@ export async function extractRequirements(text: string): Promise<ExtractedRequir
 
   const { GROQ_API_KEY, GROQ_MODEL } = getConfig();
   if (!GROQ_API_KEY) {
-    throw new RequirementExtractionError('Groq extraction is not configured. Set GROQ_API_KEY on the API service.');
+    throw new RequirementExtractionError(
+      'Groq extraction is not configured. Set GROQ_API_KEY on the API service.',
+      503
+    );
   }
 
   let response;
@@ -110,9 +113,25 @@ export async function extractRequirements(text: string): Promise<ExtractedRequir
     const status = axios.isAxiosError(error) ? error.response?.status : undefined;
     const reason = error instanceof Error ? error.message : 'Unknown request error';
     console.error('[RequirementExtractor] Groq request failed:', status || reason);
-    throw new RequirementExtractionError(
-      status ? `Groq extraction request failed with status ${status}.` : 'Could not reach Groq for requirement extraction.'
-    );
+    if (status === 401 || status === 403) {
+      throw new RequirementExtractionError(
+        `Groq rejected the API key (HTTP ${status}). Check GROQ_API_KEY on the API service.`
+      );
+    }
+    if (status === 400 || status === 404) {
+      throw new RequirementExtractionError(
+        `Groq rejected the extraction request (HTTP ${status}). Check that GROQ_MODEL is set to an active model.`
+      );
+    }
+    if (status === 429) {
+      throw new RequirementExtractionError(
+        'Groq rate limit or quota reached (HTTP 429). Check the Groq account limits and try again.'
+      );
+    }
+    if (status) {
+      throw new RequirementExtractionError(`Groq extraction request failed (HTTP ${status}).`);
+    }
+    throw new RequirementExtractionError('Could not reach Groq for requirement extraction.');
   }
 
   const content = response.data.choices?.[0]?.message?.content;

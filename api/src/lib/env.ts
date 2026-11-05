@@ -75,6 +75,14 @@ export function getConfig(): EnvConfig {
   const whatsappProvider = (process.env.WHATSAPP_PROVIDER || 'mock') as 'meta' | 'mock';
   const driveProvider = (process.env.DRIVE_PROVIDER || 'demo') as 'google' | 'demo';
   const emailProvider = (process.env.EMAIL_PROVIDER || 'mock') as 'smtp' | 'mock';
+  const configuredGroqModel = optionalEnv('GROQ_MODEL');
+  const retiredGroqModel = 'llama-3.3-70b-versatile';
+  const groqModel = configuredGroqModel === retiredGroqModel
+    ? 'openai/gpt-oss-120b'
+    : configuredGroqModel || 'openai/gpt-oss-120b';
+  if (configuredGroqModel === retiredGroqModel) {
+    console.warn(`[Config] GROQ_MODEL ${retiredGroqModel} is retired; using ${groqModel}.`);
+  }
 
   const bootstrapAdminPassword = optionalEnv('BOOTSTRAP_ADMIN_PASSWORD');
   if (bootstrapAdminPassword && bootstrapAdminPassword.length < 16) {
@@ -127,7 +135,7 @@ export function getConfig(): EnvConfig {
     EMAIL_PASS: optionalEnv('EMAIL_PASS'),
     EMAIL_FROM: process.env.EMAIL_FROM || 'noreply@revnow.local',
     GROQ_API_KEY: optionalEnv('GROQ_API_KEY'),
-    GROQ_MODEL: process.env.GROQ_MODEL || 'llama-3.3-70b-versatile',
+    GROQ_MODEL: groqModel,
   };
 
   return _config;

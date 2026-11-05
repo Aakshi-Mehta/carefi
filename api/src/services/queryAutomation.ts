@@ -4,7 +4,7 @@ import Match from '../models/Match';
 import DocumentModel from '../models/Document';
 import Patient from '../models/Patient';
 import { writeAudit } from '../lib/audit';
-import { extractRequirements } from './requirementExtractor';
+import { extractRequirements, RequirementExtractionError } from './requirementExtractor';
 import { matchRequirements } from './documentMatcher';
 
 export interface QueryAutomationOutcome {
@@ -153,7 +153,9 @@ export async function automateQueryResponse(queryId: string, actor: string): Pro
       matchedCount,
       missingCount,
       channels: [],
-      detail: `Automatic ${stage} failed. The query was saved for follow-up.`,
+      detail: error instanceof RequirementExtractionError
+        ? error.message
+        : `Automatic ${stage} failed. The query was saved for follow-up.`,
     };
   }
 }

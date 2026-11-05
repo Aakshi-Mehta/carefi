@@ -10,7 +10,7 @@ import Claim from '../models/Claim';
 import { requireAuth, requireStaff, AuthRequest } from '../middleware/authMiddleware';
 import { writeAudit } from '../lib/audit';
 import { extractPdfText } from '../services/pdfExtractor';
-import { extractRequirements } from '../services/requirementExtractor';
+import { extractRequirements, RequirementExtractionError } from '../services/requirementExtractor';
 import { matchRequirements } from '../services/documentMatcher';
 import { automateQueryResponse } from '../services/queryAutomation';
 import { openPatientFile, storePatientFile } from '../services/patientFileStorage';
@@ -256,6 +256,10 @@ router.post('/:id/extract', requireStaff, async (req: AuthRequest, res: Response
     }
   } catch (err) {
     console.error('[Queries] Extract error:', err);
+    if (err instanceof RequirementExtractionError) {
+      res.status(err.statusCode).json({ error: err.message });
+      return;
+    }
     res.status(500).json({ error: 'Requirement extraction failed' });
   }
 });
